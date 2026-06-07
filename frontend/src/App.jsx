@@ -18,7 +18,8 @@ function App() {
         category: "",
     });
     const [courses, setCourses] = useState([]);
-
+    const [courseLectures, setCourseLectures] = useState({});
+    const [lectureData, setLectureData] = useState({});
     useEffect(() => {
         const savedRole = localStorage.getItem("role");
 
@@ -72,14 +73,20 @@ function App() {
             });
 
             if (login) {
-                const result = await res.json();
+                const text = await res.text();
 
-                localStorage.setItem("token", result.token);
-                localStorage.setItem("role", result.role);
-                localStorage.setItem("email", result.email);
+                try {
+                    const result = JSON.parse(text);
 
-                setMessage(result.message + " as " + result.role);
-                setDashboardRole(result.role);
+                    localStorage.setItem("token", result.token);
+                    localStorage.setItem("role", result.role);
+                    localStorage.setItem("email", result.email);
+
+                    setMessage(result.message + " as " + result.role);
+                    setDashboardRole(result.role);
+                } catch {
+                    setMessage(text);
+                }
             } else {
                 const text = await res.text();
                 setMessage(text);
@@ -162,6 +169,79 @@ function App() {
             courses.filter(course => course.id !== id)
         );
     };
+    const changeLecture = (courseId, e) => {
+        setLectureData({
+            ...lectureData,
+            [courseId]: {
+                ...lectureData[courseId],
+                [e.target.name]: e.target.value,
+            },
+        });
+    };
+
+    const changeLectureFile = (courseId, e) => {
+        setLectureData({
+            ...lectureData,
+            [courseId]: {
+                ...lectureData[courseId],
+                file: e.target.files[0],
+            },
+        });
+    };
+
+    const uploadLecture = async (courseId) => {
+        const lecture = lectureData[courseId];
+
+        const formData = new FormData();
+
+        formData.append("title", lecture.title);
+        formData.append("type", lecture.type || "VIDEO");
+        formData.append("lectureOrder", lecture.lectureOrder);
+        formData.append("file", lecture.file);
+
+        await fetch("http://localhost:8080/lectures/upload/" + courseId, {
+            method: "POST",
+            body: formData,
+        });
+
+        alert("Lecture uploaded successfully");
+        await loadLectures(courseId);
+        setLectureData({
+            ...lectureData,
+            [courseId]: {
+                title: "",
+                lectureOrder: "",
+                type: "VIDEO",
+                file: null,
+            },
+        });
+    };
+    const deleteLecture = async (lectureId, courseId) => {
+        await fetch("http://localhost:8080/lectures/delete/" + lectureId, {
+            method: "DELETE",
+        });
+
+        await loadLectures(courseId);
+    };
+    const loadLectures = async (courseId) => {
+        const res = await fetch("http://localhost:8080/lectures/course/" + courseId);
+        const data = await res.json();
+
+        setCourseLectures({
+            ...courseLectures,
+            [courseId]: data,
+        });
+    };
+    const updateLectureOrder = async (lectureId, courseId, newOrder) => {
+        await fetch(
+            "http://localhost:8080/lectures/update-order/" + lectureId + "?lectureOrder=" + newOrder,
+            {
+                method: "PUT",
+            }
+        );
+
+        await loadLectures(courseId);
+    };
     if (dashboardRole) {
         return (
             <div className="min-h-screen bg-gray-100 p-8">
@@ -186,11 +266,11 @@ function App() {
                         </button>
 
                         <button
-                            onClick={() => {
+                            onClick={async () => {
                                 setSection("courses");
 
                                 if (dashboardRole === "INSTRUCTOR") {
-                                    loadInstructorCourses();
+                                    await loadInstructorCourses();
                                 }
                             }}
                             className="border px-4 py-2 rounded"
@@ -260,6 +340,7 @@ function App() {
                                                 <h4 className="font-bold">{course.title}</h4>
                                                 <p>{course.description}</p>
                                                 <p className="text-sm text-gray-600">{course.category}</p>
+
                                                 <button
                                                     onClick={() => {
                                                         setEditingCourseId(course.id);
@@ -273,12 +354,98 @@ function App() {
                                                 >
                                                     Edit
                                                 </button>
+
                                                 <button
                                                     onClick={() => deleteCourse(course.id)}
                                                     className="mt-2 bg-red-500 text-white px-3 py-1 rounded"
                                                 >
                                                     Delete
                                                 </button>
+
+                                                <div className="mt-3 border-t pt-3">
+                                                    <h5 className="font-bold mb-2">Upload Lecture / Resource</h5>
+
+                                                    <input
+                                                        name="title"
+                                                        placeholder="Lecture Title"
+                                                        value={lectureData[course.id]?.title || ""}
+                                                        onChange={(e) => changeLecture(course.id, e)}
+                                                        className="w-full border p-2 mb-2 rounded"
+                                                    />
+                                                    <input
+                                                        name="lectureOrder"
+                                                        type="number"
+                                                        min="1"
+                                                        placeholder="Lecture Order"
+                                                        value={lectureData[course.id]?.lectureOrder || ""}
+                                                        onChange={(e) => changeLecture(course.id, e)}
+                                                        className="w-full border p-2 mb-2 rounded"
+                                                    />
+                                                    <select
+                                                        name="type"
+                                                        value={lectureData[course.id]?.type || "VIDEO"}
+                                                        onChange={(e) => changeLecture(course.id, e)}
+                                                        className="w-full border p-2 mb-2 rounded"
+                                                    >
+                                                        <option value="VIDEO">VIDEO</option>
+                                                        <option value="PDF">PDF</option>
+                                                        <option value="NOTES">NOTES</option>
+                                                    </select>
+
+                                                    <input
+                                                        type="file"
+                                                        onChange={(e) => changeLectureFile(course.id, e)}
+                                                        className="w-full border p-2 mb-2 rounded"
+                                                    />
+
+                                                    <button
+                                                        onClick={() => uploadLecture(course.id)}
+                                                        className="bg-purple-500 text-white px-3 py-1 rounded"
+                                                    >
+                                                        Upload
+                                                    </button>
+                                                    <button
+                                                        onClick={() => loadLectures(course.id)}
+                                                        className="ml-2 bg-green-500 text-white px-3 py-1 rounded"
+                                                    >
+                                                        Show Lectures
+                                                    </button>
+                                                </div>
+                                                <div className="mt-3">
+                                                    {courseLectures[course.id]?.map((lecture) => (
+                                                        <div key={lecture.id} className="border p-2 rounded mb-2">
+                                                            <p className="font-semibold">{lecture.title}</p>
+
+                                                            <p className="text-sm text-gray-600 mb-2">
+                                                                {lecture.type}
+                                                            </p>
+
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                defaultValue={lecture.lectureOrder}
+                                                                className="border p-1 rounded mr-2 w-24"
+                                                                id={"order-" + lecture.id}
+                                                            />
+
+                                                            <button
+                                                                onClick={() => {
+                                                                    const newOrder = document.getElementById("order-" + lecture.id).value;
+                                                                    updateLectureOrder(lecture.id, course.id, newOrder);
+                                                                }}
+                                                                className="bg-blue-500 text-white px-3 py-1 rounded"
+                                                            >
+                                                                Save Order
+                                                            </button>
+                                                            <button
+                                                                onClick={() => deleteLecture(lecture.id, course.id)}
+                                                                className="ml-2 bg-red-500 text-white px-3 py-1 rounded"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

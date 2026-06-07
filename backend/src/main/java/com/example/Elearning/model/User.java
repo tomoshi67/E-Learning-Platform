@@ -1,6 +1,6 @@
 package com.example.Elearning.model;
-
 import com.example.Elearning.Role;
+
 import jakarta.persistence.*;
 
 @Entity
