@@ -27,6 +27,12 @@ function App() {
             setDashboardRole(savedRole);
         }
     }, []);
+    const [reviewData, setReviewData] = useState({});
+    const [courseReviews, setCourseReviews] = useState({});
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState("All");
+    const [enrollments, setEnrollments] = useState([]);
+    const [userCoursePanel, setUserCoursePanel] = useState("all");
 
     const change = (e) => {
         setMessage("");
@@ -242,6 +248,118 @@ function App() {
 
         await loadLectures(courseId);
     };
+    const changeReview = (courseId, e) => {
+        setReviewData({
+            ...reviewData,
+            [courseId]: {
+                ...reviewData[courseId],
+                [e.target.name]: e.target.value,
+            },
+        });
+    };
+
+    const addReview = async (courseId) => {
+        const review = reviewData[courseId];
+
+        await fetch("http://localhost:8080/reviews/add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                userEmail: localStorage.getItem("email"),
+                courseId: courseId,
+                rating: review.rating,
+                comment: review.comment,
+            }),
+        });
+
+        alert("Review added successfully");
+
+        await loadReviews(courseId);
+
+        setReviewData({
+            ...reviewData,
+            [courseId]: {
+                rating: "",
+                comment: "",
+            },
+        });
+    };
+
+    const loadReviews = async (courseId) => {
+        const res = await fetch("http://localhost:8080/reviews/course/" + courseId);
+        const data = await res.json();
+
+        setCourseReviews({
+            ...courseReviews,
+            [courseId]: data,
+        });
+    };
+
+    const loadAllCourses = async () => {
+        const res = await fetch("http://localhost:8080/courses/all");
+        const data = await res.json();
+        setCourses(data);
+    };
+
+    const loadUserEnrollments = async () => {
+        const email = localStorage.getItem("email");
+
+        const res = await fetch(
+            "http://localhost:8080/enrollments/user/" + encodeURIComponent(email)
+        );
+
+        const data = await res.json();
+        setEnrollments(data);
+    };
+
+    const enrollCourse = async (courseId) => {
+        const res = await fetch("http://localhost:8080/enrollments/enroll", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                userEmail: localStorage.getItem("email"),
+                courseId: courseId,
+            }),
+        });
+
+        const text = await res.text();
+        alert(text);
+
+        await loadUserEnrollments();
+    };
+
+    const isEnrolled = (courseId) => {
+        return enrollments.some((enrollment) => enrollment.courseId === courseId);
+    };
+
+    const getEnrolledCourses = () => {
+        return courses.filter((course) => isEnrolled(course.id));
+    };
+
+
+    const categories = [
+        "All",
+        ...new Set(courses.map((course) => course.category).filter(Boolean)),
+    ];
+
+    const filteredCourses = courses.filter((course) => {
+        const search = searchTerm.toLowerCase();
+
+        const matchesSearch =
+            (course.title || "").toLowerCase().includes(search) ||
+            (course.description || "").toLowerCase().includes(search) ||
+            (course.category || "").toLowerCase().includes(search);
+
+        const matchesCategory =
+            selectedCategory === "All" || course.category === selectedCategory;
+
+        return matchesSearch && matchesCategory;
+    });
+
     if (dashboardRole) {
         return (
             <div className="min-h-screen bg-gray-100 p-8">
@@ -271,6 +389,11 @@ function App() {
 
                                 if (dashboardRole === "INSTRUCTOR") {
                                     await loadInstructorCourses();
+                                }
+
+                                if (dashboardRole === "USER") {
+                                    await loadAllCourses();
+                                    await loadUserEnrollments();
                                 }
                             }}
                             className="border px-4 py-2 rounded"
@@ -429,9 +552,9 @@ function App() {
                                                             />
 
                                                             <button
-                                                                onClick={() => {
+                                                                onClick={async () => {
                                                                     const newOrder = document.getElementById("order-" + lecture.id).value;
-                                                                    updateLectureOrder(lecture.id, course.id, newOrder);
+                                                                    await updateLectureOrder(lecture.id, course.id, newOrder);
                                                                 }}
                                                                 className="bg-blue-500 text-white px-3 py-1 rounded"
                                                             >
@@ -446,12 +569,204 @@ function App() {
                                                         </div>
                                                     ))}
                                                 </div>
+                                                <div className="mt-3 border-t pt-3">
+                                                    <h5 className="font-bold mb-2">Reviews</h5>
+
+                                                    <button
+                                                        onClick={() => loadReviews(course.id)}
+                                                        className="bg-gray-600 text-white px-3 py-1 rounded mb-2"
+                                                    >
+                                                        Show Reviews
+                                                    </button>
+
+                                                    {courseReviews[course.id]?.map((review) => (
+                                                        <div key={review.id} className="border p-2 rounded mb-2">
+                                                            <p>Rating: {review.rating}/5</p>
+                                                            <p>{review.comment}</p>
+                                                            <p className="text-sm text-gray-600">
+                                                                By: {review.userEmail}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             ) : dashboardRole === "USER" ? (
-                                <p>View enrolled courses here.</p>
+                                <div>
+                                    <div className="flex gap-2 mb-4">
+                                        <button
+                                            onClick={() => setUserCoursePanel("all")}
+                                            className={
+                                                userCoursePanel === "all"
+                                                    ? "bg-blue-600 text-white px-3 py-1 rounded"
+                                                    : "bg-blue-500 text-white px-3 py-1 rounded"
+                                            }
+                                        >
+                                            All Courses
+                                        </button>
+
+                                        <button
+                                            onClick={() => setUserCoursePanel("enrolled")}
+                                            className={
+                                                userCoursePanel === "enrolled"
+                                                    ? "bg-green-600 text-white px-3 py-1 rounded"
+                                                    : "bg-green-500 text-white px-3 py-1 rounded"
+                                            }
+                                        >
+                                            My Enrolled Courses
+                                        </button>
+                                    </div>
+
+                                    {userCoursePanel === "all" && (
+                                        <div>
+                                            <h3 className="font-bold mb-2">Browse Courses</h3>
+
+                                            <button
+                                                onClick={loadAllCourses}
+                                                className="bg-blue-500 text-white px-3 py-1 rounded mb-3"
+                                            >
+                                                Load Courses
+                                            </button>
+
+                                            <input
+                                                placeholder="Search courses by title, description, or category"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                className="w-full border p-2 mb-3 rounded"
+                                            />
+
+                                            <select
+                                                value={selectedCategory}
+                                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                                className="w-full border p-2 mb-3 rounded"
+                                            >
+                                                {categories.map((category) => (
+                                                    <option key={category} value={category}>
+                                                        {category}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                            <p className="text-sm text-gray-600 mb-3">
+                                                Showing {filteredCourses.length} course(s)
+                                            </p>
+
+                                            {filteredCourses.map((course) => (
+                                                <div key={course.id} className="border p-3 rounded mb-3">
+                                                    <h4 className="font-bold">{course.title}</h4>
+                                                    <p>{course.description}</p>
+                                                    <p className="text-sm text-gray-600">{course.category}</p>
+
+                                                    <button
+                                                        onClick={() => enrollCourse(course.id)}
+                                                        disabled={isEnrolled(course.id)}
+                                                        className={
+                                                            isEnrolled(course.id)
+                                                                ? "mt-2 bg-gray-400 text-white px-3 py-1 rounded"
+                                                                : "mt-2 bg-blue-500 text-white px-3 py-1 rounded"
+                                                        }
+                                                    >
+                                                        {isEnrolled(course.id) ? "Enrolled" : "Enroll"}
+                                                    </button>
+
+                                                    <div className="mt-3 border-t pt-3">
+                                                        <h5 className="font-bold mb-2">Add Review</h5>
+
+                                                        <input
+                                                            name="rating"
+                                                            type="number"
+                                                            min="1"
+                                                            max="5"
+                                                            placeholder="Rating 1-5"
+                                                            value={reviewData[course.id]?.rating || ""}
+                                                            onChange={(e) => changeReview(course.id, e)}
+                                                            className="w-full border p-2 mb-2 rounded"
+                                                        />
+
+                                                        <input
+                                                            name="comment"
+                                                            placeholder="Write review"
+                                                            value={reviewData[course.id]?.comment || ""}
+                                                            onChange={(e) => changeReview(course.id, e)}
+                                                            className="w-full border p-2 mb-2 rounded"
+                                                        />
+
+                                                        <button
+                                                            onClick={() => addReview(course.id)}
+                                                            className="bg-green-500 text-white px-3 py-1 rounded"
+                                                        >
+                                                            Submit Review
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => loadReviews(course.id)}
+                                                            className="ml-2 bg-gray-600 text-white px-3 py-1 rounded"
+                                                        >
+                                                            Show Reviews
+                                                        </button>
+
+                                                        {courseReviews[course.id]?.map((review) => (
+                                                            <div key={review.id} className="border p-2 rounded mt-2">
+                                                                <p>Rating: {review.rating}/5</p>
+                                                                <p>{review.comment}</p>
+                                                                <p className="text-sm text-gray-600">
+                                                                    By: {review.userEmail}
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {userCoursePanel === "enrolled" && (
+                                        <div>
+                                            <h3 className="font-bold mb-2">My Enrolled Courses</h3>
+
+                                            {getEnrolledCourses().length === 0 ? (
+                                                <p className="text-gray-600">
+                                                    You have not enrolled in any courses yet.
+                                                </p>
+                                            ) : (
+                                                getEnrolledCourses().map((course) => (
+                                                    <div key={course.id} className="border p-3 rounded mb-3">
+                                                        <h4 className="font-bold">{course.title}</h4>
+                                                        <p>{course.description}</p>
+                                                        <p className="text-sm text-gray-600">{course.category}</p>
+
+                                                        <button
+                                                            onClick={() => loadLectures(course.id)}
+                                                            className="mt-2 bg-green-500 text-white px-3 py-1 rounded"
+                                                        >
+                                                            Watch Lectures
+                                                        </button>
+
+                                                        <div className="mt-3">
+                                                            {courseLectures[course.id]?.map((lecture) => (
+                                                                <div key={lecture.id} className="border p-2 rounded mb-2">
+                                                                    <p className="font-semibold">
+                                                                        {lecture.lectureOrder}. {lecture.title}
+                                                                    </p>
+
+                                                                    <p className="text-sm text-gray-600">
+                                                                        {lecture.type}
+                                                                    </p>
+
+                                                                    <p className="text-sm">
+                                                                        File: {lecture.fileName}
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             ) : (
                                 <p>Monitor all platform courses here.</p>
                             )}
