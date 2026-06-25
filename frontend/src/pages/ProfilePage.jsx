@@ -3,6 +3,25 @@ import { useNavigate } from "react-router-dom";
 function ProfilePage() {
     const navigate = useNavigate();
 
+    const role = localStorage.getItem("role");
+
+    const goToProfile = () => {
+        if (role === "USER") navigate("/user/profile");
+        if (role === "INSTRUCTOR") navigate("/instructor/profile");
+        if (role === "ADMIN") navigate("/admin/dashboard");
+    };
+
+    const goToDetails = () => {
+        if (role === "USER") navigate("/user/details");
+        if (role === "INSTRUCTOR") navigate("/instructor/details");
+        if (role === "ADMIN") navigate("/admin/dashboard");
+    };
+
+    const goToCourses = () => {
+        if (role === "USER") navigate("/user/courses");
+        if (role === "INSTRUCTOR") navigate("/instructor/courses");
+    };
+
     const logout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
@@ -20,22 +39,20 @@ function ProfilePage() {
                 </h1>
 
                 <div className="flex gap-3 mb-6">
-                    <button
-                        onClick={() => navigate("/profile")}
-                        className="border px-4 py-2 rounded"
+                    <button onClick={goToProfile} className="border px-4 py-2 rounded"
                     >
                         Profile
                     </button>
 
                     <button
-                        onClick={() => navigate("/details")}
+                        onClick={goToDetails}
                         className="border px-4 py-2 rounded"
                     >
                         Details
                     </button>
 
                     <button
-                        onClick={() => navigate("/courses")}
+                        onClick={goToCourses}
                         className="border px-4 py-2 rounded"
                     >
                         Courses

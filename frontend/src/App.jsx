@@ -16,31 +16,69 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
 
             <Route
-                path="/profile"
+                path="/user/profile"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={["USER"]}>
                         <ProfilePage />
                     </ProtectedRoute>
                 }
             />
 
             <Route
-                path="/details"
+                path="/user/details"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={["USER"]}>
                         <DetailsPage />
                     </ProtectedRoute>
                 }
             />
 
             <Route
-                path="/courses"
+                path="/user/courses"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={["USER"]}>
                         <CoursesPage />
                     </ProtectedRoute>
                 }
             />
+
+            <Route
+                path="/instructor/profile"
+                element={
+                    <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+                        <ProfilePage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/instructor/details"
+                element={
+                    <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+                        <DetailsPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/instructor/courses"
+                element={
+                    <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+                        <CoursesPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/admin/dashboard"
+                element={
+                    <ProtectedRoute allowedRoles={["ADMIN"]}>
+                        <DetailsPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
     );
 }

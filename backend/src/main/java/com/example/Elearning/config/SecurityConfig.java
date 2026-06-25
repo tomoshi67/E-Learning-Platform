@@ -2,19 +2,36 @@ package com.example.Elearning.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import com.example.Elearning.security.JwtFilter;
 
 import java.util.List;
 
 @Configuration
 public class SecurityConfig {
 
+    private final JwtFilter jwtFilter;
+
+    public SecurityConfig(JwtFilter jwtFilter) {
+        this.jwtFilter = jwtFilter;
+    }
+
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
+            throws Exception {
+
+        return config.getAuthenticationManager();
     }
 
     @Bean
@@ -30,8 +47,40 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/register", "/auth/login", "/hello").permitAll()
-                        .anyRequest().permitAll()
+                        .requestMatchers("/uploads/**").permitAll()
+
+                        .requestMatchers("/enrollments/enroll").hasRole("USER")
+                        .requestMatchers("/enrollments/user/**").hasRole("USER")
+                        .requestMatchers("/progress/update").hasRole("USER")
+                        .requestMatchers("/progress/user/**").hasRole("USER")
+                        .requestMatchers("/reviews/add").hasRole("USER")
+
+                        .requestMatchers("/courses/add").hasRole("INSTRUCTOR")
+                        .requestMatchers("/courses/update/**").hasRole("INSTRUCTOR")
+                        .requestMatchers("/courses/delete/**").hasRole("INSTRUCTOR")
+
+                        .requestMatchers("/lectures/upload/**").hasRole("INSTRUCTOR")
+                        .requestMatchers("/lectures/delete/**").hasRole("INSTRUCTOR")
+                        .requestMatchers("/lectures/update-order/**").hasRole("INSTRUCTOR")
+
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+
+                        .requestMatchers("/courses/all")
+                        .hasAnyRole("USER","INSTRUCTOR","ADMIN")
+
+                        .requestMatchers("/lectures/course/**")
+                        .hasAnyRole("USER","INSTRUCTOR","ADMIN")
+
+                        .requestMatchers("/reviews/course/**")
+                        .hasAnyRole("USER","INSTRUCTOR","ADMIN")
+
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class
                 );
+
 
         return http.build();
     }

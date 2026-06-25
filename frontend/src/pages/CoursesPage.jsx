@@ -22,6 +22,34 @@ function CoursesPage() {
     const [userCoursePanel, setUserCoursePanel] = useState("all");
     const [progressList, setProgressList] = useState([]);
 
+    const authHeaders = () => ({
+        Authorization: "Bearer " + localStorage.getItem("token"),
+    });
+
+    const authJsonHeaders = () => ({
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + localStorage.getItem("token"),
+    });
+
+    const role = localStorage.getItem("role");
+
+    const goToProfile = () => {
+        if (role === "USER") navigate("/user/profile");
+        if (role === "INSTRUCTOR") navigate("/instructor/profile");
+        if (role === "ADMIN") navigate("/admin/dashboard");
+    };
+
+    const goToDetails = () => {
+        if (role === "USER") navigate("/user/details");
+        if (role === "INSTRUCTOR") navigate("/instructor/details");
+        if (role === "ADMIN") navigate("/admin/dashboard");
+    };
+
+    const goToCourses = () => {
+        if (role === "USER") navigate("/user/courses");
+        if (role === "INSTRUCTOR") navigate("/instructor/courses");
+    };
+
     const logout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
@@ -51,10 +79,7 @@ function CoursesPage() {
 
         const res = await fetch(url, {
             method: method,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + localStorage.getItem("token"),
-            },
+            headers: authJsonHeaders(),
             body: JSON.stringify(courseBody),
         });
 
@@ -82,7 +107,10 @@ function CoursesPage() {
         const email = localStorage.getItem("email");
 
         const res = await fetch(
-            "http://localhost:8080/courses/instructor/" + encodeURIComponent(email)
+            "http://localhost:8080/courses/instructor/" + encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
         );
 
         const data = await res.json();
@@ -92,6 +120,7 @@ function CoursesPage() {
     const deleteCourse = async (id) => {
         await fetch("http://localhost:8080/courses/delete/" + id, {
             method: "DELETE",
+            headers: authHeaders(),
         });
 
         setCourses(courses.filter((course) => course.id !== id));
@@ -133,6 +162,7 @@ function CoursesPage() {
 
         await fetch("http://localhost:8080/lectures/upload/" + courseId, {
             method: "POST",
+            headers: authHeaders(),
             body: formData,
         });
 
@@ -153,13 +183,16 @@ function CoursesPage() {
     const deleteLecture = async (lectureId, courseId) => {
         await fetch("http://localhost:8080/lectures/delete/" + lectureId, {
             method: "DELETE",
+            headers: authHeaders(),
         });
 
         await loadLectures(courseId);
     };
 
     const loadLectures = async (courseId) => {
-        const res = await fetch("http://localhost:8080/lectures/course/" + courseId);
+        const res = await fetch("http://localhost:8080/lectures/course/" + courseId, {
+            headers: authHeaders(),
+        });
         const data = await res.json();
 
         setCourseLectures({
@@ -173,6 +206,7 @@ function CoursesPage() {
             "http://localhost:8080/lectures/update-order/" + lectureId + "?lectureOrder=" + newOrder,
             {
                 method: "PUT",
+                headers: authHeaders(),
             }
         );
 
@@ -194,9 +228,7 @@ function CoursesPage() {
 
         await fetch("http://localhost:8080/reviews/add", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: authJsonHeaders(),
             body: JSON.stringify({
                 userEmail: localStorage.getItem("email"),
                 courseId: courseId,
@@ -218,7 +250,9 @@ function CoursesPage() {
     };
 
     const loadReviews = async (courseId) => {
-        const res = await fetch("http://localhost:8080/reviews/course/" + courseId);
+        const res = await fetch("http://localhost:8080/reviews/course/" + courseId, {
+            headers: authHeaders(),
+        });
         const data = await res.json();
 
         setCourseReviews({
@@ -228,7 +262,9 @@ function CoursesPage() {
     };
 
     const loadAllCourses = async () => {
-        const res = await fetch("http://localhost:8080/courses/all");
+        const res = await fetch("http://localhost:8080/courses/all", {
+            headers: authHeaders(),
+        });
         const data = await res.json();
         setCourses(data);
     };
@@ -237,7 +273,10 @@ function CoursesPage() {
         const email = localStorage.getItem("email");
 
         const res = await fetch(
-            "http://localhost:8080/enrollments/user/" + encodeURIComponent(email)
+            "http://localhost:8080/enrollments/user/" + encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
         );
 
         const data = await res.json();
@@ -247,9 +286,7 @@ function CoursesPage() {
     const enrollCourse = async (courseId) => {
         const res = await fetch("http://localhost:8080/enrollments/enroll", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: authJsonHeaders(),
             body: JSON.stringify({
                 userEmail: localStorage.getItem("email"),
                 courseId: courseId,
@@ -293,7 +330,10 @@ function CoursesPage() {
         const email = localStorage.getItem("email");
 
         const res = await fetch(
-            "http://localhost:8080/progress/user/" + encodeURIComponent(email)
+            "http://localhost:8080/progress/user/" + encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
         );
 
         const data = await res.json();
@@ -310,9 +350,7 @@ function CoursesPage() {
     const updateProgress = async (lectureId, completed) => {
         await fetch("http://localhost:8080/progress/update", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
+            headers: authJsonHeaders(),
             body: JSON.stringify({
                 userEmail: localStorage.getItem("email"),
                 lectureId: lectureId,
@@ -324,15 +362,19 @@ function CoursesPage() {
     };
 
     useEffect(() => {
-        if (dashboardRole === "INSTRUCTOR") {
-            loadInstructorCourses();
-        }
+        const loadData = async () => {
+            if (dashboardRole === "INSTRUCTOR") {
+                await loadInstructorCourses();
+            }
 
-        if (dashboardRole === "USER") {
-            loadAllCourses();
-            loadUserEnrollments();
-            loadUserProgress();
-        }
+            if (dashboardRole === "USER") {
+                await loadAllCourses();
+                await loadUserEnrollments();
+                await loadUserProgress();
+            }
+        };
+
+        loadData();
     }, [dashboardRole]);
 
     return (
@@ -343,15 +385,15 @@ function CoursesPage() {
                 </h1>
 
                 <div className="flex gap-3 mb-6">
-                    <button onClick={() => navigate("/profile")} className="border px-4 py-2 rounded">
+                    <button onClick={goToProfile} className="border px-4 py-2 rounded">
                         Profile
                     </button>
 
-                    <button onClick={() => navigate("/details")} className="border px-4 py-2 rounded">
+                    <button onClick={goToDetails} className="border px-4 py-2 rounded">
                         Details
                     </button>
 
-                    <button onClick={() => navigate("/courses")} className="border px-4 py-2 rounded">
+                    <button onClick={goToCourses} className="border px-4 py-2 rounded">
                         Courses
                     </button>
                 </div>

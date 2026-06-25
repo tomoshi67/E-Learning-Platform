@@ -6,6 +6,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import com.example.Elearning.security.JwtUtil;
 import com.example.Elearning.dto.LoginResponse;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 @RestController
 @RequestMapping("/auth")
@@ -15,13 +17,16 @@ public class AuthController {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final AuthenticationManager authenticationManager;
 
     public AuthController(UserRepository userRepository,
                           BCryptPasswordEncoder passwordEncoder,
-                          JwtUtil jwtUtil) {
+                          JwtUtil jwtUtil,
+                          AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.authenticationManager = authenticationManager;
     }
 
     @PostMapping("/register")
@@ -78,9 +83,12 @@ public class AuthController {
             return "User not found";
         }
 
-        if(passwordEncoder.matches(
-                user.getPassword(),
-                existingUser.getPassword())) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        user.getEmail(),
+                        user.getPassword()
+                )
+        );
 
             String token = jwtUtil.generateToken(existingUser);
 
@@ -90,8 +98,5 @@ public class AuthController {
                     "Login Successful",
                     existingUser.getEmail()
             );
-        }
-
-        return "Incorrect Password";
     }
 }
