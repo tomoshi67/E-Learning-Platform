@@ -4,6 +4,7 @@ function DetailsPage() {
     const navigate = useNavigate();
 
     const role = localStorage.getItem("role");
+    const email = localStorage.getItem("email");
 
     const goToProfile = () => {
         if (role === "USER") navigate("/user/profile");
@@ -31,49 +32,164 @@ function DetailsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 p-8">
-            <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
+        <div className="min-h-screen bg-[#ededed] p-4">
+            <div className="min-h-[calc(100vh-2rem)] bg-white rounded-[2rem] shadow-xl grid grid-cols-12 overflow-hidden">
 
-                <h1 className="text-3xl font-bold mb-4">
-                    {localStorage.getItem("role")} Dashboard
-                </h1>
+                <aside className="hidden md:flex md:col-span-3 bg-[#f7f7f7] p-6 flex-col justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold mb-8">E-Learn</h1>
 
-                <div className="flex gap-3 mb-6">
+                        <div className="space-y-3">
+                            <button
+                                onClick={goToProfile}
+                                className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm"
+                            >
+                                Profile
+                            </button>
+
+                            <button
+                                onClick={goToDetails}
+                                className="w-full text-left bg-black text-white px-4 py-3 rounded-2xl"
+                            >
+                                Details
+                            </button>
+
+                            {role !== "ADMIN" && (
+                                <button
+                                    onClick={goToCourses}
+                                    className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm"
+                                >
+                                    Courses
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
                     <button
-                        onClick={goToProfile}
-                        className="border px-4 py-2 rounded"
+                        onClick={logout}
+                        className="w-full bg-red-500 text-white px-4 py-3 rounded-2xl"
                     >
-                        Profile
+                        Logout
                     </button>
+                </aside>
 
-                    <button
-                        onClick={goToDetails}
-                        className="border px-4 py-2 rounded"
-                    >
-                        Details
-                    </button>
+                <main className="col-span-12 md:col-span-9 p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <div>
+                            <p className="text-sm text-gray-500">Dashboard</p>
+                            <h2 className="text-3xl font-bold">{role} Details</h2>
+                        </div>
 
-                    <button
-                        onClick={goToCourses}
-                        className="border px-4 py-2 rounded"
-                    >
-                        Courses
-                    </button>
-                </div>
+                        <button
+                            onClick={logout}
+                            className="md:hidden bg-red-500 text-white px-4 py-2 rounded-full"
+                        >
+                            Logout
+                        </button>
+                    </div>
 
-                <div className="border p-4 rounded">
-                    <h2 className="font-bold mb-2">Details</h2>
-                    <p>Basic account and platform information.</p>
-                    <p className="mt-2">Logged in as: {localStorage.getItem("email")}</p>
-                    <p>Role: {localStorage.getItem("role")}</p>
-                </div>
+                    <div className="md:hidden flex gap-2 mb-5">
+                        <button
+                            onClick={goToProfile}
+                            className="bg-white px-4 py-2 rounded-full shadow-sm"
+                        >
+                            Profile
+                        </button>
 
-                <button
-                    onClick={logout}
-                    className="mt-6 bg-red-500 text-white px-4 py-2 rounded"
-                >
-                    Logout
-                </button>
+                        <button
+                            onClick={goToDetails}
+                            className="bg-black text-white px-4 py-2 rounded-full"
+                        >
+                            Details
+                        </button>
+
+                        {role !== "ADMIN" && (
+                            <button
+                                onClick={goToCourses}
+                                className="bg-white px-4 py-2 rounded-full shadow-sm"
+                            >
+                                Courses
+                            </button>
+                        )}
+                    </div>
+
+                    <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                        <div className="lg:col-span-2 bg-[#f7f7f7] rounded-[2rem] p-8">
+                            <p className="text-gray-500 mb-2">Platform Information</p>
+
+                            <h3 className="text-4xl font-bold mb-6">
+                                Account details.
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-white rounded-2xl p-5 shadow-sm">
+                                    <p className="text-sm text-gray-500">Logged in as</p>
+                                    <p className="font-semibold break-all">{email}</p>
+                                </div>
+
+                                <div className="bg-white rounded-2xl p-5 shadow-sm">
+                                    <p className="text-sm text-gray-500">Current role</p>
+                                    <p className="font-semibold">{role}</p>
+                                </div>
+
+                                <div className="bg-white rounded-2xl p-5 shadow-sm">
+                                    <p className="text-sm text-gray-500">Authentication</p>
+                                    <p className="font-semibold">JWT Secured</p>
+                                </div>
+
+                                <div className="bg-white rounded-2xl p-5 shadow-sm">
+                                    <p className="text-sm text-gray-500">Dashboard Access</p>
+                                    <p className="font-semibold">Role Based</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-[#f7f7f7] rounded-[2rem] p-6">
+                            <h3 className="font-bold text-xl mb-4">What this account can do</h3>
+
+                            <div className="space-y-3">
+                                {role === "INSTRUCTOR" && (
+                                    <>
+                                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                            Create and manage courses
+                                        </div>
+                                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                            Upload lectures and resources
+                                        </div>
+                                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                            View student reviews
+                                        </div>
+                                    </>
+                                )}
+
+                                {role === "USER" && (
+                                    <>
+                                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                            Browse and enroll in courses
+                                        </div>
+                                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                            Watch lectures and notes
+                                        </div>
+                                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                            Track learning progress
+                                        </div>
+                                    </>
+                                )}
+
+                                {role === "ADMIN" && (
+                                    <>
+                                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                            Monitor platform users
+                                        </div>
+                                        <div className="bg-white rounded-2xl p-4 shadow-sm">
+                                            Manage platform activity
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+                </main>
 
             </div>
         </div>
