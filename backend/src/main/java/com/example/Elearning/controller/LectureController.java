@@ -4,6 +4,13 @@ import com.example.Elearning.model.Lecture;
 import com.example.Elearning.repository.LectureRepository;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.Elearning.model.Notification;
+import com.example.Elearning.repository.NotificationRepository;
+import java.time.LocalDateTime;
+import com.example.Elearning.model.Enrollment;
+import com.example.Elearning.repository.EnrollmentRepository;
+
+import java.util.List;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,10 +21,18 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class LectureController {
 
-    private final LectureRepository lectureRepository;
 
-    public LectureController(LectureRepository lectureRepository) {
+    private final EnrollmentRepository enrollmentRepository;
+    private final LectureRepository lectureRepository;
+    private final NotificationRepository notificationRepository;
+    public LectureController(
+            LectureRepository lectureRepository,
+            NotificationRepository notificationRepository,
+            EnrollmentRepository enrollmentRepository
+    ) {
         this.lectureRepository = lectureRepository;
+        this.notificationRepository = notificationRepository;
+        this.enrollmentRepository = enrollmentRepository;
     }
 
     @PostMapping("/upload/{courseId}")
@@ -48,7 +63,24 @@ public class LectureController {
         lecture.setCourseId(courseId);
         lecture.setLectureOrder(lectureOrder);
 
-        return lectureRepository.save(lecture);
+        Lecture savedLecture = lectureRepository.save(lecture);
+
+        List<Enrollment> enrollments =
+                enrollmentRepository.findByCourseId(courseId);
+
+        for (Enrollment enrollment : enrollments) {
+            Notification notification = new Notification();
+            notification.setCourseId(courseId);
+            notification.setUserEmail(enrollment.getUserEmail());
+            notification.setType("LECTURE");
+            notification.setMessage("New lecture added: " + title);
+            notification.setCreatedAt(LocalDateTime.now());
+            notification.setSeen(false);
+
+            notificationRepository.save(notification);
+        }
+
+        return savedLecture;
     }
 
     @GetMapping("/course/{courseId}")

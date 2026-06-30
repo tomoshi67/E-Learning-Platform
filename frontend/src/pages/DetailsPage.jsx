@@ -1,10 +1,16 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 function DetailsPage() {
     const navigate = useNavigate();
+    const [hasUnread, setHasUnread] = useState(false);
 
     const role = localStorage.getItem("role");
     const email = localStorage.getItem("email");
+
+    const authHeaders = () => ({
+        Authorization: "Bearer " + localStorage.getItem("token"),
+    });
 
     const goToProfile = () => {
         if (role === "USER") navigate("/user/profile");
@@ -23,6 +29,16 @@ function DetailsPage() {
         if (role === "INSTRUCTOR") navigate("/instructor/courses");
     };
 
+    const goToQuizzes = () => {
+        if (role === "USER") navigate("/user/quizzes");
+        if (role === "INSTRUCTOR") navigate("/instructor/quizzes");
+    };
+
+    const goToNotifications = () => {
+        if (role === "USER") navigate("/user/notifications");
+        if (role === "INSTRUCTOR") navigate("/instructor/notifications");
+    };
+
     const logout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
@@ -30,6 +46,25 @@ function DetailsPage() {
 
         navigate("/login", { replace: true });
     };
+
+    const loadUnread = async () => {
+        const email = localStorage.getItem("email");
+
+        const res = await fetch(
+            "http://localhost:8080/notifications/has-unread/" +
+            encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
+        );
+
+        const data = await res.json();
+        setHasUnread(data);
+    };
+
+    useEffect(() => {
+        loadUnread();
+    }, []);
 
     return (
         <div className="min-h-screen bg-[#ededed] p-4">
@@ -55,12 +90,34 @@ function DetailsPage() {
                             </button>
 
                             {role !== "ADMIN" && (
-                                <button
-                                    onClick={goToCourses}
-                                    className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm"
-                                >
-                                    Courses
-                                </button>
+                                <>
+                                    <button
+                                        onClick={goToCourses}
+                                        className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm"
+                                    >
+                                        Courses
+                                    </button>
+
+                                    <button
+                                        onClick={goToQuizzes}
+                                        className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm"
+                                    >
+                                        Quizzes
+                                    </button>
+
+                                    {role === "USER" && (
+                                        <button
+                                            onClick={goToNotifications}
+                                            className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
+                                        >
+                                            <span>Notifications</span>
+                                            {hasUnread && (
+                                                <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                            )}
+                                        </button>
+                                    )}
+
+                                </>
                             )}
                         </div>
                     </div>
@@ -86,31 +143,6 @@ function DetailsPage() {
                         >
                             Logout
                         </button>
-                    </div>
-
-                    <div className="md:hidden flex gap-2 mb-5">
-                        <button
-                            onClick={goToProfile}
-                            className="bg-white px-4 py-2 rounded-full shadow-sm"
-                        >
-                            Profile
-                        </button>
-
-                        <button
-                            onClick={goToDetails}
-                            className="bg-black text-white px-4 py-2 rounded-full"
-                        >
-                            Details
-                        </button>
-
-                        {role !== "ADMIN" && (
-                            <button
-                                onClick={goToCourses}
-                                className="bg-white px-4 py-2 rounded-full shadow-sm"
-                            >
-                                Courses
-                            </button>
-                        )}
                     </div>
 
                     <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">

@@ -7,6 +7,8 @@ import RegisterPage from "./pages/RegisterPage";
 import ProfilePage from "./pages/ProfilePage";
 import DetailsPage from "./pages/DetailsPage";
 import CoursesPage from "./pages/CoursesPage";
+import QuizPage from "./pages/QuizPage";
+import NotificationPage from "./pages/NotificationPage";
 
 function App() {
     return (
@@ -41,6 +43,22 @@ function App() {
                     </ProtectedRoute>
                 }
             />
+            <Route
+                path="/user/quizzes"
+                element={
+                    <ProtectedRoute allowedRoles={["USER"]}>
+                        <QuizPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/user/notifications"
+                element={
+                    <ProtectedRoute allowedRoles={["USER"]}>
+                        <NotificationPage />
+                    </ProtectedRoute>
+                }
+            />
 
             <Route
                 path="/instructor/profile"
@@ -68,7 +86,22 @@ function App() {
                     </ProtectedRoute>
                 }
             />
-
+            <Route
+                path="/instructor/quizzes"
+                element={
+                    <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+                        <QuizPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/instructor/notifications"
+                element={
+                    <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+                        <NotificationPage />
+                    </ProtectedRoute>
+                }
+            />
             <Route
                 path="/admin/dashboard"
                 element={
