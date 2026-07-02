@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 function NotificationPage() {
     const navigate = useNavigate();
     const role = localStorage.getItem("role");
+    const [hasChatUnread, setHasChatUnread] = useState(false);
 
     const [notifications, setNotifications] = useState([]);
 
@@ -35,6 +36,10 @@ function NotificationPage() {
         if (role === "USER") navigate("/user/notifications");
         if (role === "INSTRUCTOR") navigate("/instructor/notifications");
     };
+    const goToChat = () => {
+        if (role === "USER") navigate("/user/chat");
+        if (role === "INSTRUCTOR") navigate("/instructor/chat");
+    };
 
     const logout = () => {
         localStorage.clear();
@@ -55,10 +60,24 @@ function NotificationPage() {
         const data = await res.json();
         setNotifications(data);
     };
+    const loadChatUnread = async () => {
+        const email = localStorage.getItem("email");
 
+        const res = await fetch(
+            "http://localhost:8080/chat/has-unread/" +
+            encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
+        );
+
+        const data = await res.json();
+        setHasChatUnread(data);
+    };
     useEffect(() => {
         const initialize = async () => {
             await loadNotifications();
+            await loadChatUnread();
 
             const email = localStorage.getItem("email");
 
@@ -100,7 +119,16 @@ function NotificationPage() {
                             <button onClick={goToQuizzes} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
                                 Quizzes
                             </button>
+                            <button
+                                onClick={goToChat}
+                                className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
+                            >
+                                <span>Chat</span>
 
+                                {hasChatUnread && (
+                                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                )}
+                            </button>
                             {role === "USER" && (
                                 <button
                                     onClick={goToNotifications}

@@ -9,6 +9,9 @@ import DetailsPage from "./pages/DetailsPage";
 import CoursesPage from "./pages/CoursesPage";
 import QuizPage from "./pages/QuizPage";
 import NotificationPage from "./pages/NotificationPage";
+import ChatPage from "./pages/ChatPage";
+import PaymentSuccessPage from "./pages/PaymentSuccessPage";
+import PaymentCancelPage from "./pages/PaymentCancelPage";
 
 function App() {
     return (
@@ -59,6 +62,15 @@ function App() {
                     </ProtectedRoute>
                 }
             />
+            <Route
+                path="/user/chat"
+                element={
+                    <ProtectedRoute allowedRoles={["USER"]}>
+                        <ChatPage />
+                    </ProtectedRoute>
+                }
+            />
+
 
             <Route
                 path="/instructor/profile"
@@ -103,6 +115,15 @@ function App() {
                 }
             />
             <Route
+                path="/instructor/chat"
+                element={
+                    <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+                        <ChatPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
                 path="/admin/dashboard"
                 element={
                     <ProtectedRoute allowedRoles={["ADMIN"]}>
@@ -110,6 +131,9 @@ function App() {
                     </ProtectedRoute>
                 }
             />
+
+            <Route path="/payment-success" element={<PaymentSuccessPage />} />
+            <Route path="/payment-cancel" element={<PaymentCancelPage />} />
 
             <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

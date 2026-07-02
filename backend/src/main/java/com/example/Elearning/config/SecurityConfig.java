@@ -49,11 +49,17 @@ public class SecurityConfig {
                         .requestMatchers("/auth/register", "/auth/login", "/hello").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
 
+
+                        .requestMatchers("/payments/**")
+                        .hasRole("USER")
+
+
                         .requestMatchers("/enrollments/enroll").hasRole("USER")
                         .requestMatchers("/enrollments/user/**").hasRole("USER")
                         .requestMatchers("/progress/update").hasRole("USER")
                         .requestMatchers("/progress/user/**").hasRole("USER")
                         .requestMatchers("/reviews/add").hasRole("USER")
+
 
                         .requestMatchers("/courses/add").hasRole("INSTRUCTOR")
                         .requestMatchers("/courses/update/**").hasRole("INSTRUCTOR")
@@ -63,16 +69,33 @@ public class SecurityConfig {
                         .requestMatchers("/lectures/delete/**").hasRole("INSTRUCTOR")
                         .requestMatchers("/lectures/update-order/**").hasRole("INSTRUCTOR")
 
+
                         .requestMatchers("/admin/**").hasRole("ADMIN")
 
+
                         .requestMatchers("/courses/all")
-                        .hasAnyRole("USER","INSTRUCTOR","ADMIN")
+                        .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
 
                         .requestMatchers("/lectures/course/**")
-                        .hasAnyRole("USER","INSTRUCTOR","ADMIN")
+                        .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
 
                         .requestMatchers("/reviews/course/**")
-                        .hasAnyRole("USER","INSTRUCTOR","ADMIN")
+                        .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
+
+                        .requestMatchers("/quizzes/**")
+                        .hasAnyRole("USER", "INSTRUCTOR")
+
+                        .requestMatchers("/quiz-questions/**")
+                        .hasAnyRole("USER", "INSTRUCTOR")
+
+                        .requestMatchers("/quiz-attempts/**")
+                        .hasRole("USER")
+
+                        .requestMatchers("/notifications/**")
+                        .hasAnyRole("USER", "INSTRUCTOR")
+
+                        .requestMatchers("/chat/**")
+                        .hasAnyRole("USER", "INSTRUCTOR")
 
                         .anyRequest().authenticated()
                 )

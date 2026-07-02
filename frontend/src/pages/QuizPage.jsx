@@ -22,6 +22,7 @@ function QuizPage() {
 
     const [quizTitle, setQuizTitle] = useState("");
     const [hasUnread, setHasUnread] = useState(false);
+    const [hasChatUnread, setHasChatUnread] = useState(false);
 
     const [questionData, setQuestionData] = useState({
         question: "",
@@ -64,6 +65,11 @@ function QuizPage() {
         if (role === "USER") navigate("/user/notifications");
         if (role === "INSTRUCTOR") navigate("/instructor/notifications");
     };
+    const goToChat = () => {
+        if (role === "USER") navigate("/user/chat");
+        if (role === "INSTRUCTOR") navigate("/instructor/chat");
+    };
+
     const logout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
@@ -367,11 +373,26 @@ function QuizPage() {
         const data = await res.json();
         setHasUnread(data);
     };
+    const loadChatUnread = async () => {
+        const email = localStorage.getItem("email");
+
+        const res = await fetch(
+            "http://localhost:8080/chat/has-unread/" +
+            encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
+        );
+
+        const data = await res.json();
+        setHasChatUnread(data);
+    };
     useEffect(() => {
         const initialize = async () => {
             await loadCourses();
             await loadUnread();
             await loadQuizAttempts();
+            await loadChatUnread();
         };
 
         initialize();
@@ -412,6 +433,16 @@ function QuizPage() {
                                 className="w-full text-left bg-black text-white px-4 py-3 rounded-2xl"
                             >
                                 Quizzes
+                            </button>
+                            <button
+                                onClick={goToChat}
+                                className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
+                            >
+                                <span>Chat</span>
+
+                                {hasChatUnread && (
+                                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                )}
                             </button>
                             {role === "USER" && (
                                 <button

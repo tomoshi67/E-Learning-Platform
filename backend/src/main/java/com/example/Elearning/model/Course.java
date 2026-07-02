@@ -13,6 +13,7 @@ public class Course {
     private String description;
     private String category;
     private String instructorEmail;
+    private Long price;
 
     public Long getId() {
         return id;
@@ -48,5 +49,13 @@ public class Course {
 
     public void setInstructorEmail(String instructorEmail) {
         this.instructorEmail = instructorEmail;
+    }
+
+    public Long getPrice() {
+        return price;
+    }
+
+    public void setPrice(Long price) {
+        this.price = price;
     }
 }

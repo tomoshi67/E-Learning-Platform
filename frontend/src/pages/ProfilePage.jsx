@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 function ProfilePage() {
     const navigate = useNavigate();
     const [hasUnread, setHasUnread] = useState(false);
+    const [hasChatUnread, setHasChatUnread] = useState(false);
 
     const role = localStorage.getItem("role");
     const email = localStorage.getItem("email");
@@ -38,6 +39,10 @@ function ProfilePage() {
         if (role === "USER") navigate("/user/notifications");
         if (role === "INSTRUCTOR") navigate("/instructor/notifications");
     };
+    const goToChat = () => {
+        if (role === "USER") navigate("/user/chat");
+        if (role === "INSTRUCTOR") navigate("/instructor/chat");
+    };
 
     const logout = () => {
         localStorage.removeItem("token");
@@ -61,10 +66,30 @@ function ProfilePage() {
         const data = await res.json();
         setHasUnread(data);
     };
+    const loadChatUnread = async () => {
+        const email = localStorage.getItem("email");
+
+        const res = await fetch(
+            "http://localhost:8080/chat/has-unread/" +
+            encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
+        );
+
+        const data = await res.json();
+        setHasChatUnread(data);
+    };
 
     useEffect(() => {
-        loadUnread();
+        const initialize = async () => {
+            await loadUnread();
+            await loadChatUnread();
+        };
+
+        initialize();
     }, []);
+
 
     return (
         <div className="min-h-screen bg-[#ededed] p-4">
@@ -90,6 +115,16 @@ function ProfilePage() {
 
                                     <button onClick={goToQuizzes} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
                                         Quizzes
+                                    </button>
+                                    <button
+                                        onClick={goToChat}
+                                        className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
+                                    >
+                                        <span>Chat</span>
+
+                                        {hasChatUnread && (
+                                            <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                        )}
                                     </button>
                                     {role === "USER" && (
                                         <button

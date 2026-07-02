@@ -11,6 +11,7 @@ function CoursesPage() {
         title: "",
         description: "",
         category: "",
+        price: "",
     });
     const [courses, setCourses] = useState([]);
     const [courseLectures, setCourseLectures] = useState({});
@@ -24,6 +25,7 @@ function CoursesPage() {
     const [progressList, setProgressList] = useState([]);
     const [activeCoursePanel, setActiveCoursePanel] = useState({});
     const [hasUnread, setHasUnread] = useState(false);
+    const [hasChatUnread, setHasChatUnread] = useState(false);
 
     const authHeaders = () => ({
         Authorization: "Bearer " + localStorage.getItem("token"),
@@ -59,6 +61,11 @@ function CoursesPage() {
         if (role === "USER") navigate("/user/notifications");
         if (role === "INSTRUCTOR") navigate("/instructor/notifications");
     };
+    const goToChat = () => {
+        if (role === "USER") navigate("/user/chat");
+        if (role === "INSTRUCTOR") navigate("/instructor/chat");
+    };
+
     const logout = () => {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
@@ -158,6 +165,7 @@ function CoursesPage() {
             title: "",
             description: "",
             category: "",
+            price: "",
         });
     };
 
@@ -341,22 +349,27 @@ function CoursesPage() {
         setEnrollments(data);
     };
 
-    const enrollCourse = async (courseId) => {
-        const res = await fetch("http://localhost:8080/enrollments/enroll", {
+    const enrollCourse = async (course) => {
+        const res = await fetch("http://localhost:8080/payments/create-checkout-session", {
             method: "POST",
             headers: authJsonHeaders(),
             body: JSON.stringify({
                 userEmail: localStorage.getItem("email"),
-                courseId: courseId,
+                courseId: course.id,
+                amount: course.price,
             }),
         });
 
-        const text = await res.text();
-        alert(text);
+        const checkoutUrl = await res.text();
 
-        await loadUserEnrollments();
+        if (checkoutUrl === "ALREADY_PAID") {
+            alert("You already paid for this course.");
+            await loadUserEnrollments();
+            return;
+        }
+
+        window.location.assign(checkoutUrl);
     };
-
     const isEnrolled = (courseId) => {
         return enrollments.some((enrollment) => enrollment.courseId === courseId);
     };
@@ -444,6 +457,20 @@ function CoursesPage() {
         const data = await res.json();
         setHasUnread(data);
     };
+    const loadChatUnread = async () => {
+        const email = localStorage.getItem("email");
+
+        const res = await fetch(
+            "http://localhost:8080/chat/has-unread/" +
+            encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
+        );
+
+        const data = await res.json();
+        setHasChatUnread(data);
+    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -464,6 +491,7 @@ function CoursesPage() {
     useEffect(() => {
         const initializeUnread = async () => {
             await loadUnread();
+            await loadChatUnread();
         };
 
         initializeUnread();
@@ -501,6 +529,16 @@ function CoursesPage() {
                                 className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm"
                             >
                                 Quizzes
+                            </button>
+                            <button
+                                onClick={goToChat}
+                                className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
+                            >
+                                <span>Chat</span>
+
+                                {hasChatUnread && (
+                                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                )}
                             </button>
                             {role === "USER" && (
                                 <button
@@ -617,6 +655,15 @@ function CoursesPage() {
                                     onChange={changeCourse}
                                     className="w-full bg-white border border-gray-200 px-4 py-3 mb-4 rounded-2xl outline-none focus:border-black"
                                 />
+                                <input
+                                    name="price"
+                                    type="number"
+                                    min="1"
+                                    placeholder="Course Price"
+                                    value={courseData.price}
+                                    onChange={changeCourse}
+                                    className="w-full bg-white border border-gray-200 px-4 py-3 mb-4 rounded-2xl outline-none focus:border-black"
+                                />
 
                                 <button
                                     onClick={addCourse}
@@ -653,6 +700,7 @@ function CoursesPage() {
                                                                 title: course.title,
                                                                 description: course.description,
                                                                 category: course.category,
+                                                                price: course.price,
                                                             });
                                                         }}
                                                         className="bg-yellow-400 text-black px-4 py-2 rounded-full text-sm"
@@ -873,9 +921,12 @@ function CoursesPage() {
                                                 <h4 className="text-xl font-bold">{course.title}</h4>
                                                 <p className="text-gray-600 mt-1">{course.description}</p>
                                                 <p className="text-sm text-gray-500 mt-2">{course.category}</p>
+                                                <p className="text-lg font-bold mt-2 text-green-600">
+                                                    ₹{course.price}
+                                                </p>
 
                                                 <button
-                                                    onClick={() => enrollCourse(course.id)}
+                                                    onClick={() => enrollCourse(course)}
                                                     disabled={isEnrolled(course.id)}
                                                     className={
                                                         isEnrolled(course.id)
@@ -883,7 +934,7 @@ function CoursesPage() {
                                                             : "mt-4 bg-black text-white px-4 py-2 rounded-full"
                                                     }
                                                 >
-                                                    {isEnrolled(course.id) ? "Enrolled" : "Enroll"}
+                                                    {isEnrolled(course.id) ? "Enrolled" : `Enroll Now - ₹${course.price || 0}`}
                                                 </button>
 
                                                 <div className="mt-4 border-t pt-4">
