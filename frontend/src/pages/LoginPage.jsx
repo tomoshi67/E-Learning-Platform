@@ -44,17 +44,9 @@ function LoginPage() {
                 localStorage.setItem("role", result.role);
                 localStorage.setItem("email", result.email);
 
-                if (result.role === "USER") {
-                    navigate("/user/profile");
-                }
-
-                if (result.role === "INSTRUCTOR") {
-                    navigate("/instructor/profile");
-                }
-
-                if (result.role === "ADMIN") {
-                    navigate("/admin/dashboard");
-                }
+                if (result.role === "USER") navigate("/user/profile");
+                if (result.role === "INSTRUCTOR") navigate("/instructor/profile");
+                if (result.role === "ADMIN") navigate("/admin/profile");
             } catch {
                 setMessage(text);
             }

@@ -45,21 +45,25 @@ function QuizPage() {
     const goToProfile = () => {
         if (role === "USER") navigate("/user/profile");
         if (role === "INSTRUCTOR") navigate("/instructor/profile");
+        if (role === "ADMIN") navigate("/admin/profile");
     };
 
     const goToDetails = () => {
         if (role === "USER") navigate("/user/details");
         if (role === "INSTRUCTOR") navigate("/instructor/details");
+        if (role === "ADMIN") navigate("/admin/details");
     };
 
     const goToCourses = () => {
         if (role === "USER") navigate("/user/courses");
         if (role === "INSTRUCTOR") navigate("/instructor/courses");
+        if (role === "ADMIN") navigate("/admin/courses");
     };
 
     const goToQuizzes = () => {
         if (role === "USER") navigate("/user/quizzes");
         if (role === "INSTRUCTOR") navigate("/instructor/quizzes");
+        if (role === "ADMIN") navigate("/admin/quizzes");
     };
     const goToNotifications = () => {
         if (role === "USER") navigate("/user/notifications");
@@ -434,16 +438,19 @@ function QuizPage() {
                             >
                                 Quizzes
                             </button>
-                            <button
-                                onClick={goToChat}
-                                className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
-                            >
-                                <span>Chat</span>
+                            {role !== "ADMIN" && (
+                                <button
+                                    onClick={goToChat}
+                                    className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
+                                >
+                                    <span>Chat</span>
 
-                                {hasChatUnread && (
-                                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                                )}
-                            </button>
+                                    {hasChatUnread && (
+                                        <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                    )}
+                                </button>
+                            )}
+
                             {role === "USER" && (
                                 <button
                                     onClick={goToNotifications}

@@ -16,23 +16,25 @@ function ProfilePage() {
     const goToProfile = () => {
         if (role === "USER") navigate("/user/profile");
         if (role === "INSTRUCTOR") navigate("/instructor/profile");
-        if (role === "ADMIN") navigate("/admin/dashboard");
+        if (role === "ADMIN") navigate("/admin/profile");
     };
 
     const goToDetails = () => {
         if (role === "USER") navigate("/user/details");
         if (role === "INSTRUCTOR") navigate("/instructor/details");
-        if (role === "ADMIN") navigate("/admin/dashboard");
+        if (role === "ADMIN") navigate("/admin/details");
     };
 
     const goToCourses = () => {
         if (role === "USER") navigate("/user/courses");
         if (role === "INSTRUCTOR") navigate("/instructor/courses");
+        if (role === "ADMIN") navigate("/admin/courses");
     };
 
     const goToQuizzes = () => {
         if (role === "USER") navigate("/user/quizzes");
         if (role === "INSTRUCTOR") navigate("/instructor/quizzes");
+        if (role === "ADMIN") navigate("/admin/quizzes");
     };
 
     const goToNotifications = () => {
@@ -106,13 +108,16 @@ function ProfilePage() {
                             <button onClick={goToDetails} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
                                 Details
                             </button>
+                            <button
+                                onClick={goToCourses}
+                                className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm"
+                            >
+                                {role === "ADMIN" ? "Manage" : "Courses"}
+                            </button>
+
 
                             {role !== "ADMIN" && (
                                 <>
-                                    <button onClick={goToCourses} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                        Courses
-                                    </button>
-
                                     <button onClick={goToQuizzes} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
                                         Quizzes
                                     </button>

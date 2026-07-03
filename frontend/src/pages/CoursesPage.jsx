@@ -26,6 +26,13 @@ function CoursesPage() {
     const [activeCoursePanel, setActiveCoursePanel] = useState({});
     const [hasUnread, setHasUnread] = useState(false);
     const [hasChatUnread, setHasChatUnread] = useState(false);
+    const [instructors, setInstructors] = useState([]);
+    const [selectedInstructorEmail, setSelectedInstructorEmail] = useState("");
+    const [adminCourses, setAdminCourses] = useState([]);
+    const [selectedAdminCourseId, setSelectedAdminCourseId] = useState("");
+    const [adminSection, setAdminSection] = useState("");
+    const [adminLectures, setAdminLectures] = useState([]);
+    const [adminQuizzes, setAdminQuizzes] = useState([]);
 
     const authHeaders = () => ({
         Authorization: "Bearer " + localStorage.getItem("token"),
@@ -39,23 +46,25 @@ function CoursesPage() {
     const goToProfile = () => {
         if (role === "USER") navigate("/user/profile");
         if (role === "INSTRUCTOR") navigate("/instructor/profile");
-        if (role === "ADMIN") navigate("/admin/dashboard");
+        if (role === "ADMIN") navigate("/admin/profile");
     };
 
     const goToDetails = () => {
         if (role === "USER") navigate("/user/details");
         if (role === "INSTRUCTOR") navigate("/instructor/details");
-        if (role === "ADMIN") navigate("/admin/dashboard");
+        if (role === "ADMIN") navigate("/admin/details");
     };
 
     const goToCourses = () => {
         if (role === "USER") navigate("/user/courses");
         if (role === "INSTRUCTOR") navigate("/instructor/courses");
+        if (role === "ADMIN") navigate("/admin/courses");
     };
 
     const goToQuizzes = () => {
         if (role === "USER") navigate("/user/quizzes");
         if (role === "INSTRUCTOR") navigate("/instructor/quizzes");
+        if (role === "ADMIN") navigate("/admin/quizzes");
     };
     const goToNotifications = () => {
         if (role === "USER") navigate("/user/notifications");
@@ -471,7 +480,88 @@ function CoursesPage() {
         const data = await res.json();
         setHasChatUnread(data);
     };
+    const loadInstructors = async () => {
+        const res = await fetch("http://localhost:8080/admin/instructors", {
+            headers: authHeaders(),
+        });
 
+        const data = await res.json();
+        setInstructors(data);
+    };
+
+    const loadAdminCoursesByInstructor = async (email) => {
+        setSelectedInstructorEmail(email);
+        setSelectedAdminCourseId("");
+        setAdminSection("");
+        setAdminLectures([]);
+        setAdminQuizzes([]);
+
+        if (!email) {
+            setAdminCourses([]);
+            return;
+        }
+
+        const res = await fetch(
+            "http://localhost:8080/admin/courses/instructor/" + encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
+        );
+
+        const data = await res.json();
+        setAdminCourses(data);
+    };
+
+    const loadAdminLectures = async (courseId) => {
+        setSelectedAdminCourseId(courseId);
+        setAdminSection("lectures");
+
+        const res = await fetch("http://localhost:8080/lectures/course/" + courseId, {
+            headers: authHeaders(),
+        });
+
+        const data = await res.json();
+        setAdminLectures(data);
+    };
+
+    const loadAdminQuizzes = async (courseId) => {
+        setSelectedAdminCourseId(courseId);
+        setAdminSection("quizzes");
+
+        const res = await fetch("http://localhost:8080/quizzes/course/" + courseId, {
+            headers: authHeaders(),
+        });
+
+        const data = await res.json();
+        setAdminQuizzes(data);
+    };
+
+    const adminDeleteCourse = async (courseId) => {
+        await fetch("http://localhost:8080/admin/courses/delete/" + courseId, {
+            method: "DELETE",
+            headers: authHeaders(),
+        });
+
+        await loadAdminCoursesByInstructor(selectedInstructorEmail);
+    };
+
+    const adminDeleteLecture = async (lectureId) => {
+        await fetch("http://localhost:8080/admin/lectures/delete/" + lectureId, {
+            method: "DELETE",
+            headers: authHeaders(),
+        });
+
+        await loadAdminLectures(selectedAdminCourseId);
+    };
+
+    const adminDeleteQuiz = async (quizId) => {
+        await fetch("http://localhost:8080/admin/quizzes/delete/" + quizId, {
+            method: "DELETE",
+            headers: authHeaders(),
+        });
+
+        await loadAdminQuizzes(selectedAdminCourseId);
+    };
     useEffect(() => {
         const loadData = async () => {
             if (dashboardRole === "INSTRUCTOR") {
@@ -482,6 +572,9 @@ function CoursesPage() {
                 await loadAllCourses();
                 await loadUserEnrollments();
                 await loadUserProgress();
+            }
+            if (dashboardRole === "ADMIN") {
+                await loadInstructors();
             }
         };
 
@@ -522,24 +615,30 @@ function CoursesPage() {
                                 onClick={goToCourses}
                                 className="w-full text-left bg-black text-white px-4 py-3 rounded-2xl"
                             >
-                                Courses
+                                {role === "ADMIN" ? "Manage" : "Courses"}
                             </button>
-                            <button
-                                onClick={goToQuizzes}
-                                className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm"
-                            >
-                                Quizzes
-                            </button>
-                            <button
-                                onClick={goToChat}
-                                className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
-                            >
-                                <span>Chat</span>
 
-                                {hasChatUnread && (
-                                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                                )}
-                            </button>
+                            {role !== "ADMIN" && (
+                                <>
+                                    <button
+                                        onClick={goToQuizzes}
+                                        className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm"
+                                    >
+                                        Quizzes
+                                    </button>
+                                    <button
+                                        onClick={goToChat}
+                                        className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
+                                    >
+                                        <span>Chat</span>
+
+                                        {hasChatUnread && (
+                                            <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                                        )}
+                                    </button>
+
+                                </>
+                            )}
                             {role === "USER" && (
                                 <button
                                     onClick={goToNotifications}
@@ -1098,9 +1197,171 @@ function CoursesPage() {
                             )}
                         </section>
                     ) : (
-                        <section className="bg-[#f7f7f7] rounded-[2rem] p-8">
-                            <h3 className="text-2xl font-bold mb-2">Admin Courses</h3>
-                            <p className="text-gray-600">Monitor all platform courses here.</p>
+                        <section className="bg-[#f7f7f7] rounded-[2rem] p-6">
+                            <h3 className="text-2xl font-bold mb-5">Admin Course Management</h3>
+
+                            <div className="bg-white rounded-3xl p-5 shadow-sm mb-5">
+                                <h4 className="font-bold mb-3">1. Choose Instructor</h4>
+
+                                <select
+                                    value={selectedInstructorEmail}
+                                    onChange={(e) => loadAdminCoursesByInstructor(e.target.value)}
+                                    className="w-full bg-[#f7f7f7] border px-4 py-3 rounded-2xl"
+                                >
+                                    <option value="">Select instructor</option>
+
+                                    {instructors.map((instructor) => (
+                                        <option key={instructor.id} value={instructor.email}>
+                                            {instructor.username} - {instructor.email}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {selectedInstructorEmail && (
+                                <div className="bg-white rounded-3xl p-5 shadow-sm mb-5">
+                                    <h4 className="font-bold mb-3">2. Choose Course</h4>
+
+                                    {adminCourses.length === 0 ? (
+                                        <p className="text-gray-500">No courses by this instructor.</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {adminCourses.map((course) => (
+                                                <div
+                                                    key={course.id}
+                                                    className={
+                                                        selectedAdminCourseId === course.id
+                                                            ? "bg-black text-white rounded-2xl p-4"
+                                                            : "bg-[#f7f7f7] rounded-2xl p-4"
+                                                    }
+                                                >
+                                                    <div className="flex justify-between items-center gap-3">
+                                                        <div>
+                                                            <p className="font-bold">{course.title}</p>
+                                                            <p className="text-sm opacity-80">{course.category}</p>
+                                                            <p className="text-sm opacity-80">₹{course.price || 0}</p>
+                                                        </div>
+
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedAdminCourseId(course.id);
+
+                                                                    if (adminSection === "lectures") {
+                                                                        loadAdminLectures(course.id);
+                                                                    }
+
+                                                                    if (adminSection === "quizzes") {
+                                                                        loadAdminQuizzes(course.id);
+                                                                    }
+                                                                }}
+                                                                className="bg-white text-black px-3 py-1 rounded-full text-sm"
+                                                            >
+                                                                Select
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => adminDeleteCourse(course.id)}
+                                                                className="bg-red-500 text-white px-3 py-1 rounded-full text-sm"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {selectedAdminCourseId && (
+                                <div className="bg-white rounded-3xl p-5 shadow-sm mb-5">
+                                    <h4 className="font-bold mb-3">3. Choose What To Manage</h4>
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => loadAdminLectures(selectedAdminCourseId)}
+                                            className={
+                                                adminSection === "lectures"
+                                                    ? "bg-black text-white px-5 py-2 rounded-full"
+                                                    : "bg-[#f7f7f7] px-5 py-2 rounded-full"
+                                            }
+                                        >
+                                            Lectures
+                                        </button>
+
+                                        <button
+                                            onClick={() => loadAdminQuizzes(selectedAdminCourseId)}
+                                            className={
+                                                adminSection === "quizzes"
+                                                    ? "bg-black text-white px-5 py-2 rounded-full"
+                                                    : "bg-[#f7f7f7] px-5 py-2 rounded-full"
+                                            }
+                                        >
+                                            Quizzes
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {adminSection === "lectures" && (
+                                <div className="bg-white rounded-3xl p-5 shadow-sm">
+                                    <h4 className="font-bold mb-3">Manage Lectures</h4>
+
+                                    {adminLectures.length === 0 ? (
+                                        <p className="text-gray-500">No lectures found.</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {adminLectures.map((lecture) => (
+                                                <div key={lecture.id} className="bg-[#f7f7f7] rounded-2xl p-4 flex justify-between items-center">
+                                                    <div>
+                                                        <p className="font-semibold">
+                                                            {lecture.lectureOrder}. {lecture.title}
+                                                        </p>
+                                                        <p className="text-sm text-gray-500">{lecture.type}</p>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => adminDeleteLecture(lecture.id)}
+                                                        className="bg-red-500 text-white px-4 py-2 rounded-full text-sm"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {adminSection === "quizzes" && (
+                                <div className="bg-white rounded-3xl p-5 shadow-sm">
+                                    <h4 className="font-bold mb-3">Manage Quizzes</h4>
+
+                                    {adminQuizzes.length === 0 ? (
+                                        <p className="text-gray-500">No quizzes found.</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {adminQuizzes.map((quiz) => (
+                                                <div key={quiz.id} className="bg-[#f7f7f7] rounded-2xl p-4 flex justify-between items-center">
+                                                    <div>
+                                                        <p className="font-semibold">{quiz.title}</p>
+                                                        <p className="text-sm text-gray-500">Quiz ID: {quiz.id}</p>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => adminDeleteQuiz(quiz.id)}
+                                                        className="bg-red-500 text-white px-4 py-2 rounded-full text-sm"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </section>
                     )}
                 </main>

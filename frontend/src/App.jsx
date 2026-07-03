@@ -124,10 +124,37 @@ function App() {
             />
 
             <Route
-                path="/admin/dashboard"
+                path="/admin/profile"
+                element={
+                    <ProtectedRoute allowedRoles={["ADMIN"]}>
+                        <ProfilePage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/admin/details"
                 element={
                     <ProtectedRoute allowedRoles={["ADMIN"]}>
                         <DetailsPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/admin/courses"
+                element={
+                    <ProtectedRoute allowedRoles={["ADMIN"]}>
+                        <CoursesPage />
+                    </ProtectedRoute>
+                }
+            />
+
+            <Route
+                path="/admin/quizzes"
+                element={
+                    <ProtectedRoute allowedRoles={["ADMIN"]}>
+                        <QuizPage />
                     </ProtectedRoute>
                 }
             />

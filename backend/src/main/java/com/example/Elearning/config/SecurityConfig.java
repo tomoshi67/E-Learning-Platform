@@ -82,11 +82,11 @@ public class SecurityConfig {
                         .requestMatchers("/reviews/course/**")
                         .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
 
-                        .requestMatchers("/quizzes/**")
-                        .hasAnyRole("USER", "INSTRUCTOR")
+                        .requestMatchers("/quizzes/course/**")
+                        .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
 
                         .requestMatchers("/quiz-questions/**")
-                        .hasAnyRole("USER", "INSTRUCTOR")
+                        .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
 
                         .requestMatchers("/quiz-attempts/**")
                         .hasRole("USER")
