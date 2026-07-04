@@ -33,6 +33,7 @@ function CoursesPage() {
     const [adminSection, setAdminSection] = useState("");
     const [adminLectures, setAdminLectures] = useState([]);
     const [adminQuizzes, setAdminQuizzes] = useState([]);
+    const [previewLectureId, setPreviewLectureId] = useState(null);
 
     const authHeaders = () => ({
         Authorization: "Bearer " + localStorage.getItem("token"),
@@ -42,6 +43,45 @@ function CoursesPage() {
         "Content-Type": "application/json",
         Authorization: "Bearer " + localStorage.getItem("token"),
     });
+
+    const formatRole = (value) => {
+        if (!value) return "";
+        return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+    };
+
+    const sortNewestFirst = (list) => {
+        return [...list].sort((a, b) => b.id - a.id);
+    };
+
+    const getLectureAccept = (type) => {
+        if (type === "VIDEO") return ".mp4,.mov,.mkv,.avi,.webm";
+        if (type === "PDF") return ".pdf";
+        if (type === "IMAGE") return ".jpg,.jpeg,.png,.gif,.webp";
+        if (type === "NOTES") return ".txt,.doc,.docx,.ppt,.pptx,.pdf";
+        return "";
+    };
+
+    const isValidLectureFile = (type, fileName) => {
+        const lowerName = fileName.toLowerCase();
+
+        if (type === "VIDEO") {
+            return lowerName.endsWith(".mp4") || lowerName.endsWith(".mov") || lowerName.endsWith(".mkv") || lowerName.endsWith(".avi") || lowerName.endsWith(".webm");
+        }
+
+        if (type === "PDF") {
+            return lowerName.endsWith(".pdf");
+        }
+
+        if (type === "IMAGE") {
+            return lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png") || lowerName.endsWith(".gif") || lowerName.endsWith(".webp");
+        }
+
+        if (type === "NOTES") {
+            return lowerName.endsWith(".txt") || lowerName.endsWith(".doc") || lowerName.endsWith(".docx") || lowerName.endsWith(".ppt") || lowerName.endsWith(".pptx") || lowerName.endsWith(".pdf");
+        }
+
+        return false;
+    };
 
     const goToProfile = () => {
         if (role === "USER") navigate("/user/profile");
@@ -167,7 +207,7 @@ function CoursesPage() {
             );
             setEditingCourseId(null);
         } else {
-            setCourses([...courses, savedCourse]);
+            setCourses([savedCourse, ...courses]);
         }
 
         setCourseData({
@@ -189,7 +229,7 @@ function CoursesPage() {
         );
 
         const data = await res.json();
-        setCourses(data);
+        setCourses(sortNewestFirst(data));
     };
 
     const deleteCourse = async (id) => {
@@ -202,21 +242,40 @@ function CoursesPage() {
     };
 
     const changeLecture = (courseId, e) => {
+        const updatedLecture = {
+            ...lectureData[courseId],
+            [e.target.name]: e.target.value,
+        };
+
+        if (e.target.name === "type") {
+            updatedLecture.file = null;
+        }
+
         setLectureData({
             ...lectureData,
-            [courseId]: {
-                ...lectureData[courseId],
-                [e.target.name]: e.target.value,
-            },
+            [courseId]: updatedLecture,
         });
     };
 
     const changeLectureFile = (courseId, e) => {
+        const file = e.target.files[0];
+        const selectedType = lectureData[courseId]?.type || "VIDEO";
+
+        if (!file) {
+            return;
+        }
+
+        if (!isValidLectureFile(selectedType, file.name)) {
+            alert("Selected file does not match the lecture type: " + selectedType);
+            e.target.value = "";
+            return;
+        }
+
         setLectureData({
             ...lectureData,
             [courseId]: {
                 ...lectureData[courseId],
-                file: e.target.files[0],
+                file: file,
             },
         });
     };
@@ -229,9 +288,16 @@ function CoursesPage() {
             return;
         }
 
+        const selectedType = lecture.type || "VIDEO";
+
+        if (!isValidLectureFile(selectedType, lecture.file.name)) {
+            alert("Selected file does not match the lecture type: " + selectedType);
+            return;
+        }
+
         const formData = new FormData();
         formData.append("title", lecture.title);
-        formData.append("type", lecture.type || "VIDEO");
+        formData.append("type", selectedType);
         formData.append("lectureOrder", lecture.lectureOrder);
         formData.append("file", lecture.file);
 
@@ -341,7 +407,7 @@ function CoursesPage() {
             headers: authHeaders(),
         });
         const data = await res.json();
-        setCourses(data);
+        setCourses(sortNewestFirst(data));
     };
 
     const loadUserEnrollments = async () => {
@@ -453,6 +519,8 @@ function CoursesPage() {
         return Math.round((completedCount / courseLectures[courseId].length) * 100);
     };
     const loadUnread = async () => {
+        if (role !== "USER") return;
+
         const email = localStorage.getItem("email");
 
         const res = await fetch(
@@ -467,6 +535,8 @@ function CoursesPage() {
         setHasUnread(data);
     };
     const loadChatUnread = async () => {
+        if (role === "ADMIN") return;
+
         const email = localStorage.getItem("email");
 
         const res = await fetch(
@@ -509,7 +579,7 @@ function CoursesPage() {
         );
 
         const data = await res.json();
-        setAdminCourses(data);
+        setAdminCourses(sortNewestFirst(data));
     };
 
     const loadAdminLectures = async (courseId) => {
@@ -561,6 +631,23 @@ function CoursesPage() {
         });
 
         await loadAdminQuizzes(selectedAdminCourseId);
+    };
+    const downloadResource = async (lecture) => {
+        const url = "http://localhost:8080/uploads/" + lecture.fileName;
+
+        const res = await fetch(url);
+        const blob = await res.blob();
+
+        const blobUrl = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = lecture.fileName;
+        document.body.appendChild(a);
+        a.click();
+
+        a.remove();
+        window.URL.revokeObjectURL(blobUrl);
     };
     useEffect(() => {
         const loadData = async () => {
@@ -667,7 +754,7 @@ function CoursesPage() {
                     <div className="flex justify-between items-center mb-6">
                         <div>
                             <p className="text-sm text-gray-500">Dashboard</p>
-                            <h2 className="text-3xl font-bold">{dashboardRole} Courses</h2>
+                            <h2 className="text-3xl font-bold">{formatRole(dashboardRole)} Courses</h2>
                         </div>
 
                         <button
@@ -697,7 +784,7 @@ function CoursesPage() {
                             onClick={goToCourses}
                             className="bg-black text-white px-4 py-2 rounded-full"
                         >
-                            Courses
+                            {role === "ADMIN" ? "Manage" : "Courses"}
                         </button>
                         <button
                             onClick={goToQuizzes}
@@ -877,6 +964,7 @@ function CoursesPage() {
 
                                                     <input
                                                         type="file"
+                                                        accept={getLectureAccept(lectureData[course.id]?.type || "VIDEO")}
                                                         onChange={(e) => changeLectureFile(course.id, e)}
                                                         className="w-full bg-white border border-gray-200 px-4 py-3 mt-3 mb-3 rounded-2xl outline-none"
                                                     />
@@ -1021,7 +1109,7 @@ function CoursesPage() {
                                                 <p className="text-gray-600 mt-1">{course.description}</p>
                                                 <p className="text-sm text-gray-500 mt-2">{course.category}</p>
                                                 <p className="text-lg font-bold mt-2 text-green-600">
-                                                    ₹{course.price}
+                                                    ₹{course.price || 0}
                                                 </p>
 
                                                 <button
@@ -1109,7 +1197,10 @@ function CoursesPage() {
                                                     </div>
 
                                                     <button
-                                                        onClick={() => toggleUserLectures(course.id)}
+                                                        onClick={() => {
+                                                            localStorage.setItem("lastVisitedCourse", course.title);
+                                                            toggleUserLectures(course.id);
+                                                        }}
                                                         className="mt-4 bg-black text-white px-4 py-2 rounded-full"
                                                     >
                                                         {courseLectures[course.id] ? "Hide Lectures" : "Watch Lectures"}
@@ -1125,54 +1216,66 @@ function CoursesPage() {
                                                                 <p className="text-sm text-gray-500 mb-3">{lecture.type}</p>
 
                                                                 <div className="flex gap-3 flex-wrap mb-3">
-                                                                    <a
-                                                                        href={"http://localhost:8080/uploads/" + lecture.fileName}
-                                                                        target="_blank"
-                                                                        rel="noreferrer"
+                                                                    <button
+                                                                        onClick={() =>
+                                                                            setPreviewLectureId(
+                                                                                previewLectureId === lecture.id ? null : lecture.id
+                                                                            )
+                                                                        }
                                                                         className="text-blue-600 underline text-sm"
                                                                     >
-                                                                        Open Resource
-                                                                    </a>
+                                                                        {previewLectureId === lecture.id ? "Close Preview" : "Preview Resource"}
+                                                                    </button>
 
-                                                                    <a
-                                                                        href={"http://localhost:8080/uploads/" + lecture.fileName}
-                                                                        download
+                                                                    <button
+                                                                        onClick={() => downloadResource(lecture)}
                                                                         className="text-green-600 underline text-sm"
                                                                     >
                                                                         Download Resource
-                                                                    </a>
+                                                                    </button>
                                                                 </div>
 
-                                                                {lecture.type === "IMAGE" && (
-                                                                    <img
-                                                                        src={"http://localhost:8080/uploads/" + lecture.fileName}
-                                                                        alt={lecture.title}
-                                                                        className="mt-2 max-w-sm rounded-2xl border"
-                                                                    />
-                                                                )}
+                                                                {previewLectureId === lecture.id && (
+                                                                    <div className="mt-3 bg-white rounded-2xl border p-3 relative">
+                                                                        <button
+                                                                            onClick={() => setPreviewLectureId(null)}
+                                                                            className="absolute top-2 right-2 bg-black text-white px-3 py-1 rounded-full text-sm"
+                                                                        >
+                                                                            X
+                                                                        </button>
 
-                                                                {lecture.type === "VIDEO" && (
-                                                                    <video controls className="mt-2 w-full max-w-lg rounded-2xl">
-                                                                        <source
-                                                                            src={"http://localhost:8080/uploads/" + lecture.fileName}
-                                                                        />
-                                                                        Your browser does not support video playback.
-                                                                    </video>
-                                                                )}
+                                                                        {lecture.type === "IMAGE" && (
+                                                                            <img
+                                                                                src={"http://localhost:8080/uploads/" + lecture.fileName}
+                                                                                alt={lecture.title}
+                                                                                className="mt-8 max-w-full rounded-2xl"
+                                                                            />
+                                                                        )}
 
-                                                                {lecture.type === "PDF" && (
-                                                                    <iframe
-                                                                        src={"http://localhost:8080/uploads/" + lecture.fileName}
-                                                                        width="100%"
-                                                                        height="400"
-                                                                        className="mt-2 rounded-2xl border"
-                                                                    />
-                                                                )}
+                                                                        {lecture.type === "VIDEO" && (
+                                                                            <video controls className="mt-8 w-full max-w-3xl rounded-2xl">
+                                                                                <source src={"http://localhost:8080/uploads/" + lecture.fileName} />
+                                                                            </video>
+                                                                        )}
 
-                                                                {lecture.type === "NOTES" && (
-                                                                    <p className="text-sm text-gray-600 mt-2">
-                                                                        Open or download the notes using the resource links above.
-                                                                    </p>
+                                                                        {lecture.type === "PDF" && (
+                                                                            <iframe
+                                                                                src={"http://localhost:8080/uploads/" + lecture.fileName}
+                                                                                width="100%"
+                                                                                height="500"
+                                                                                className="mt-8 rounded-2xl border"
+                                                                            />
+                                                                        )}
+
+                                                                        {lecture.type === "NOTES" && (
+                                                                            <iframe
+                                                                                src={"http://localhost:8080/uploads/" + lecture.fileName}
+                                                                                width="100%"
+                                                                                height="400"
+                                                                                className="mt-8 rounded-2xl border"
+                                                                            />
+                                                                        )}
+                                                                    </div>
                                                                 )}
 
                                                                 <label className="block mt-3 text-sm">

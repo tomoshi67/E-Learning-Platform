@@ -121,4 +121,27 @@ public class AuthController {
                 existingUser.getEmail()
         );
     }
+    @PutMapping("/profile/update")
+    public User updateProfile(@RequestBody User userData) {
+
+        User user = userRepository.findByEmail(userData.getEmail());
+
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        user.setUsername(userData.getUsername());
+
+        return userRepository.save(user);
+    }
+    @GetMapping("/profile/user/{email}")
+    public User getProfile(@PathVariable String email) {
+        User user = userRepository.findByEmail(email);
+
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        return user;
+    }
 }

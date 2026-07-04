@@ -39,4 +39,9 @@ public class EnrollmentController {
     public List<Enrollment> getUserEnrollments(@PathVariable String email) {
         return enrollmentRepository.findByUserEmail(email);
     }
+
+    @GetMapping("/course/{courseId}")
+    public List<Enrollment> getCourseEnrollments(@PathVariable Long courseId) {
+        return enrollmentRepository.findByCourseId(courseId);
+    }
 }

@@ -44,6 +44,9 @@ public class SecurityConfig {
                     config.setAllowedHeaders(List.of("*"));
                     return config;
                 }))
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.disable())
+                )
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/register", "/auth/login", "/hello").permitAll()
@@ -96,6 +99,15 @@ public class SecurityConfig {
 
                         .requestMatchers("/chat/**")
                         .hasAnyRole("USER", "INSTRUCTOR")
+
+                        .requestMatchers("/auth/profile/update")
+                        .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
+
+                        .requestMatchers("/auth/profile/**")
+                        .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
+
+                        .requestMatchers("/enrollments/course/**")
+                        .hasAnyRole("INSTRUCTOR", "ADMIN")
 
                         .anyRequest().authenticated()
                 )

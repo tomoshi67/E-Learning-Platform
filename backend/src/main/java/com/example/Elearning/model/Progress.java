@@ -2,6 +2,8 @@ package com.example.Elearning.model;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 public class Progress {
 
@@ -14,6 +16,8 @@ public class Progress {
     private Long lectureId;
 
     private boolean completed;
+
+    private LocalDateTime completedAt;
 
     public Long getId() {
         return id;
@@ -41,5 +45,13 @@ public class Progress {
 
     public void setCompleted(boolean completed) {
         this.completed = completed;
+    }
+
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
     }
 }

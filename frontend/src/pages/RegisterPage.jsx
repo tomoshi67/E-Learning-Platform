@@ -23,7 +23,7 @@ function RegisterPage() {
 
     const submit = async () => {
         try {
-            const res = await fetch("http://localhost:8080/auth/register", {
+            const registerRes = await fetch("http://localhost:8080/auth/register", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -31,14 +31,42 @@ function RegisterPage() {
                 body: JSON.stringify(data),
             });
 
-            const text = await res.text();
-            setMessage(text);
+            const registerMessage = await registerRes.text();
+            setMessage(registerMessage);
 
-            if (text.toLowerCase().includes("success")) {
-                setTimeout(() => {
-                    navigate("/login", { replace: true });
-                }, 1000);
+            if (!registerMessage.toLowerCase().includes("success")) {
+                return;
             }
+            if (data.role === "ADMIN") {
+                alert("Admin request submitted successfully. Please wait for approval.");
+                navigate("/login");
+                return;
+            }
+            const loginRes = await fetch("http://localhost:8080/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: data.email,
+                    password: data.password,
+                }),
+            });
+
+            const loginData = await loginRes.json();
+
+            localStorage.setItem("token", loginData.token);
+            localStorage.setItem("role", loginData.role);
+            localStorage.setItem("email", loginData.email);
+
+            if (loginData.role === "USER") {
+                navigate("/user/profile", { replace: true });
+            } else if (loginData.role === "INSTRUCTOR") {
+                navigate("/instructor/profile", { replace: true });
+            } else if (loginData.role === "ADMIN") {
+                navigate("/admin/profile", { replace: true });
+            }
+
         } catch (error) {
             console.error(error);
             setMessage("Request failed. Backend may not be running.");

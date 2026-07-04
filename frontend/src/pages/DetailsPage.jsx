@@ -8,6 +8,11 @@ function DetailsPage() {
     const [hasChatUnread, setHasChatUnread] = useState(false);
     const [users, setUsers] = useState([]);
     const [adminRequests, setAdminRequests] = useState([]);
+    const [courses, setCourses] = useState([]);
+    const [enrollments, setEnrollments] = useState([]);
+    const [courseStats, setCourseStats] = useState([]);
+    const [weeklyCompletedCount, setWeeklyCompletedCount] = useState(0);
+    const [lastVisitedCourse, setLastVisitedCourse] = useState("");
 
     const role = localStorage.getItem("role");
     const email = localStorage.getItem("email");
@@ -123,7 +128,84 @@ function DetailsPage() {
 
         await loadAdminRequests();
     };
+    const loadUserDetailsData = async () => {
+        const userEmail = localStorage.getItem("email");
 
+        const courseRes = await fetch("http://localhost:8080/courses/all", {
+            headers: authHeaders(),
+        });
+        const allCourses = await courseRes.json();
+
+        const enrollRes = await fetch(
+            "http://localhost:8080/enrollments/user/" + encodeURIComponent(userEmail),
+            { headers: authHeaders() }
+        );
+        const enrollmentData = await enrollRes.json();
+
+        setEnrollments(enrollmentData);
+
+        const enrolledCourses = allCourses.filter((course) =>
+            enrollmentData.some((enrollment) => enrollment.courseId === course.id)
+        );
+
+        setCourses(enrolledCourses);
+    };
+
+    const loadInstructorDetailsData = async () => {
+        const instructorEmail = localStorage.getItem("email");
+
+        const res = await fetch(
+            "http://localhost:8080/courses/instructor/" + encodeURIComponent(instructorEmail),
+            { headers: authHeaders() }
+        );
+
+        const instructorCourses = await res.json();
+        setCourses(instructorCourses);
+
+        const stats = [];
+
+        for (const course of instructorCourses) {
+            const enrollRes = await fetch(
+                "http://localhost:8080/enrollments/course/" + course.id,
+                { headers: authHeaders() }
+            );
+
+            const courseEnrollments = await enrollRes.json();
+
+            stats.push({
+                ...course,
+                enrolledCount: courseEnrollments.length,
+            });
+        }
+
+        setCourseStats(stats);
+    };
+    const loadUserPerformance = async () => {
+        const userEmail = localStorage.getItem("email");
+
+        const res = await fetch(
+            "http://localhost:8080/progress/user/" + encodeURIComponent(userEmail),
+            {
+                headers: authHeaders(),
+            }
+        );
+
+        const data = await res.json();
+
+        const now = new Date();
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 7);
+
+        const completedThisWeek = data.filter((progress) => {
+            if (!progress.completed || !progress.completedAt) return false;
+
+            const completedDate = new Date(progress.completedAt);
+            return completedDate >= sevenDaysAgo && completedDate <= now;
+        });
+
+        setWeeklyCompletedCount(completedThisWeek.length);
+        setLastVisitedCourse(localStorage.getItem("lastVisitedCourse") || "No course visited yet");
+    };
     useEffect(() => {
         const initialize = async () => {
             if (role === "ADMIN") {
@@ -133,10 +215,18 @@ function DetailsPage() {
                 await loadChatUnread();
                 await loadUnread();
             }
+            if (role === "USER") {
+                await loadUserDetailsData();
+                await loadUserPerformance();
+            }
+
+            if (role === "INSTRUCTOR") {
+                await loadInstructorDetailsData();
+            }
         };
 
         initialize();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, []);
 
     return (
@@ -280,56 +370,103 @@ function DetailsPage() {
                             </div>
                         </section>
                     ) : (
-                        <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                            <div className="lg:col-span-2 bg-[#f7f7f7] rounded-[2rem] p-8">
-                                <p className="text-gray-500 mb-2">Platform Information</p>
+                        <section className="bg-[#f7f7f7] rounded-[2rem] p-8">
+                            <p className="text-gray-500 mb-2">Account Details</p>
 
-                                <h3 className="text-4xl font-bold mb-6">Account details.</h3>
+                            <h3 className="text-4xl font-bold mb-6">
+                                {role === "USER" ? "Your Learning Summary" : "Instructor Summary"}
+                            </h3>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                        <p className="text-sm text-gray-500">Logged in as</p>
-                                        <p className="font-semibold break-all">{email}</p>
-                                    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                <div className="bg-white rounded-2xl p-5 shadow-sm">
+                                    <p className="text-sm text-gray-500">Email</p>
+                                    <p className="font-semibold break-all">{email}</p>
+                                </div>
 
-                                    <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                        <p className="text-sm text-gray-500">Current role</p>
-                                        <p className="font-semibold">{role}</p>
-                                    </div>
-
-                                    <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                        <p className="text-sm text-gray-500">Authentication</p>
-                                        <p className="font-semibold">JWT Secured</p>
-                                    </div>
-
-                                    <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                        <p className="text-sm text-gray-500">Dashboard Access</p>
-                                        <p className="font-semibold">Role Based</p>
-                                    </div>
+                                <div className="bg-white rounded-2xl p-5 shadow-sm">
+                                    <p className="text-sm text-gray-500">Role</p>
+                                    <p className="font-semibold">
+                                        {role.charAt(0) + role.slice(1).toLowerCase()}
+                                    </p>
                                 </div>
                             </div>
+                            {role === "USER" && (
+                                <div className="bg-white rounded-3xl p-5 shadow-sm">
+                                    <h4 className="text-xl font-bold mb-4">
+                                        This Week Performance
+                                    </h4>
 
-                            <div className="bg-[#f7f7f7] rounded-[2rem] p-6">
-                                <h3 className="font-bold text-xl mb-4">What this account can do</h3>
+                                    <div className="space-y-3">
+                                        <div className="bg-[#f7f7f7] rounded-2xl p-4">
+                                            <p className="text-sm text-gray-500">
+                                                Lectures completed this week
+                                            </p>
+                                            <p className="text-2xl font-bold">
+                                                {weeklyCompletedCount}
+                                            </p>
+                                        </div>
 
-                                <div className="space-y-3">
-                                    {role === "INSTRUCTOR" && (
-                                        <>
-                                            <div className="bg-white rounded-2xl p-4 shadow-sm">Create and manage courses</div>
-                                            <div className="bg-white rounded-2xl p-4 shadow-sm">Upload lectures and resources</div>
-                                            <div className="bg-white rounded-2xl p-4 shadow-sm">View student reviews</div>
-                                        </>
-                                    )}
+                                        <div className="bg-[#f7f7f7] rounded-2xl p-4">
+                                            <p className="text-sm text-gray-500">
+                                                Last visited course
+                                            </p>
+                                            <p className="font-semibold">
+                                                {lastVisitedCourse}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {role === "USER" && (
 
-                                    {role === "USER" && (
-                                        <>
-                                            <div className="bg-white rounded-2xl p-4 shadow-sm">Browse and enroll in courses</div>
-                                            <div className="bg-white rounded-2xl p-4 shadow-sm">Watch lectures and notes</div>
-                                            <div className="bg-white rounded-2xl p-4 shadow-sm">Track learning progress</div>
-                                        </>
+
+                                <div className="bg-white rounded-3xl p-5 shadow-sm">
+                                    <h4 className="text-xl font-bold mb-4">
+                                        Enrolled Courses
+                                    </h4>
+
+                                    {courses.length === 0 ? (
+                                        <p className="text-gray-500">You are not enrolled in any courses yet.</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {courses.map((course) => (
+                                                <div key={course.id} className="bg-[#f7f7f7] rounded-2xl p-4">
+                                                    <p className="font-semibold">{course.title}</p>
+                                                    <p className="text-sm text-gray-500">{course.category}</p>
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
-                            </div>
+
+                            )}
+
+                            {role === "INSTRUCTOR" && (
+                                <div className="bg-white rounded-3xl p-5 shadow-sm">
+                                    <h4 className="text-xl font-bold mb-4">
+                                        Course Performance
+                                    </h4>
+
+                                    {courseStats.length === 0 ? (
+                                        <p className="text-gray-500">No courses created yet.</p>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {courseStats.map((course) => (
+                                                <div key={course.id} className="bg-[#f7f7f7] rounded-2xl p-4 flex justify-between items-center">
+                                                    <div>
+                                                        <p className="font-semibold">{course.title}</p>
+                                                        <p className="text-sm text-gray-500">{course.category}</p>
+                                                    </div>
+
+                                                    <p className="text-sm font-bold">
+                                                        {course.enrolledCount} enrolled
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </section>
                     )}
                 </main>

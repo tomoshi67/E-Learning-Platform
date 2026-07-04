@@ -3,6 +3,7 @@ package com.example.Elearning.controller;
 import com.example.Elearning.model.Progress;
 import com.example.Elearning.repository.ProgressRepository;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -30,6 +31,12 @@ public class ProgressController {
         progress.setUserEmail(progressData.getUserEmail());
         progress.setLectureId(progressData.getLectureId());
         progress.setCompleted(progressData.isCompleted());
+
+        if (progressData.isCompleted()) {
+            progress.setCompletedAt(LocalDateTime.now());
+        } else {
+            progress.setCompletedAt(null);
+        }
 
         return progressRepository.save(progress);
     }
