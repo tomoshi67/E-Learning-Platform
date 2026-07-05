@@ -49,13 +49,11 @@ public class SecurityConfig {
                 )
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+
                         .requestMatchers("/auth/register", "/auth/login", "/hello").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
 
-
-                        .requestMatchers("/payments/**")
-                        .hasRole("USER")
-
+                        .requestMatchers("/payments/**").hasRole("USER")
 
                         .requestMatchers("/enrollments/enroll").hasRole("USER")
                         .requestMatchers("/enrollments/user/**").hasRole("USER")
@@ -107,7 +105,7 @@ public class SecurityConfig {
                         .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
 
                         .requestMatchers("/enrollments/course/**")
-                        .hasAnyRole("INSTRUCTOR", "ADMIN")
+                        .hasAnyRole("USER","INSTRUCTOR", "ADMIN")
 
                         .anyRequest().authenticated()
                 )

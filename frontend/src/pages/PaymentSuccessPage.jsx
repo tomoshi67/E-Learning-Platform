@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API_URL from "../api";
 
 function PaymentSuccessPage() {
     const navigate = useNavigate();
@@ -20,7 +21,7 @@ function PaymentSuccessPage() {
             }
 
             const res = await fetch(
-                "http://localhost:8080/payments/confirm?sessionId=" + sessionId,
+                `${API_URL}/payments/confirm?sessionId=` + sessionId,
                 {
                     method: "POST",
                     headers: authHeaders(),

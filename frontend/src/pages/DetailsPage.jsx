@@ -1,5 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import API_URL from "../api";
+import DashboardLayout from "../components/DashboardLayout";
+import { Users, BookOpen, TrendingUp, Clock3, Trash2, Check, X, Shield, Mail, UserCheck } from "lucide-react";
 
 function DetailsPage() {
     const navigate = useNavigate();
@@ -63,7 +66,7 @@ function DetailsPage() {
         if (role !== "USER") return;
 
         const res = await fetch(
-            "http://localhost:8080/notifications/has-unread/" + encodeURIComponent(email),
+            `${API_URL}/notifications/has-unread/` + encodeURIComponent(email),
             { headers: authHeaders() }
         );
 
@@ -75,7 +78,7 @@ function DetailsPage() {
         if (role === "ADMIN") return;
 
         const res = await fetch(
-            "http://localhost:8080/chat/has-unread/" + encodeURIComponent(email),
+            `${API_URL}/chat/has-unread/` + encodeURIComponent(email),
             { headers: authHeaders() }
         );
 
@@ -84,7 +87,7 @@ function DetailsPage() {
     };
 
     const loadUsers = async () => {
-        const res = await fetch("http://localhost:8080/admin/users", {
+        const res = await fetch(`${API_URL}/admin/users`, {
             headers: authHeaders(),
         });
 
@@ -93,7 +96,7 @@ function DetailsPage() {
     };
 
     const deleteUser = async (id) => {
-        await fetch("http://localhost:8080/admin/users/delete/" + id, {
+        await fetch(`${API_URL}/admin/users/delete/` + id, {
             method: "DELETE",
             headers: authHeaders(),
         });
@@ -102,7 +105,7 @@ function DetailsPage() {
     };
 
     const loadAdminRequests = async () => {
-        const res = await fetch("http://localhost:8080/admin/admin-requests", {
+        const res = await fetch(`${API_URL}/admin/admin-requests`, {
             headers: authHeaders(),
         });
 
@@ -111,7 +114,7 @@ function DetailsPage() {
     };
 
     const approveAdminRequest = async (id) => {
-        await fetch("http://localhost:8080/admin/admin-requests/approve/" + id, {
+        await fetch(`${API_URL}/admin/admin-requests/approve/` + id, {
             method: "POST",
             headers: authHeaders(),
         });
@@ -121,7 +124,7 @@ function DetailsPage() {
     };
 
     const rejectAdminRequest = async (id) => {
-        await fetch("http://localhost:8080/admin/admin-requests/reject/" + id, {
+        await fetch(`${API_URL}/admin/admin-requests/reject/` + id, {
             method: "POST",
             headers: authHeaders(),
         });
@@ -131,13 +134,13 @@ function DetailsPage() {
     const loadUserDetailsData = async () => {
         const userEmail = localStorage.getItem("email");
 
-        const courseRes = await fetch("http://localhost:8080/courses/all", {
+        const courseRes = await fetch(`${API_URL}/courses/all`, {
             headers: authHeaders(),
         });
         const allCourses = await courseRes.json();
 
         const enrollRes = await fetch(
-            "http://localhost:8080/enrollments/user/" + encodeURIComponent(userEmail),
+            `${API_URL}/enrollments/user/` + encodeURIComponent(userEmail),
             { headers: authHeaders() }
         );
         const enrollmentData = await enrollRes.json();
@@ -155,7 +158,7 @@ function DetailsPage() {
         const instructorEmail = localStorage.getItem("email");
 
         const res = await fetch(
-            "http://localhost:8080/courses/instructor/" + encodeURIComponent(instructorEmail),
+            `${API_URL}/courses/instructor/` + encodeURIComponent(instructorEmail),
             { headers: authHeaders() }
         );
 
@@ -166,7 +169,7 @@ function DetailsPage() {
 
         for (const course of instructorCourses) {
             const enrollRes = await fetch(
-                "http://localhost:8080/enrollments/course/" + course.id,
+                `${API_URL}/enrollments/course/` + course.id,
                 { headers: authHeaders() }
             );
 
@@ -184,7 +187,7 @@ function DetailsPage() {
         const userEmail = localStorage.getItem("email");
 
         const res = await fetch(
-            "http://localhost:8080/progress/user/" + encodeURIComponent(userEmail),
+            `${API_URL}/progress/user/` + encodeURIComponent(userEmail),
             {
                 headers: authHeaders(),
             }
@@ -230,248 +233,191 @@ function DetailsPage() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#ededed] p-4">
-            <div className="min-h-[calc(100vh-2rem)] bg-white rounded-[2rem] shadow-xl grid grid-cols-12 overflow-hidden">
-                <aside className="hidden md:flex md:col-span-3 bg-[#f7f7f7] p-6 flex-col justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold mb-8">E-Learn</h1>
+        <DashboardLayout activePage="Details" hasUnread={hasUnread} hasChatUnread={hasChatUnread}>
+            {role === "ADMIN" ? (
+                <section className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div className="rounded-[2rem] bg-white border border-gray-100 p-6 shadow-sm">
+                            <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center mb-4">
+                                <Users size={22} />
+                            </div>
+                            <p className="text-gray-500 text-sm">Total accounts</p>
+                            <h3 className="text-3xl font-black">{users.length}</h3>
+                        </div>
 
-                        <div className="space-y-3">
-                            <button onClick={goToProfile} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                Profile
-                            </button>
+                        <div className="rounded-[2rem] bg-gradient-to-br from-purple-50 to-white border border-purple-100 p-6 shadow-sm">
+                            <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center mb-4">
+                                <Shield size={22} />
+                            </div>
+                            <p className="text-gray-500 text-sm">Admin requests</p>
+                            <h3 className="text-3xl font-black">{adminRequests.length}</h3>
+                        </div>
 
-                            <button onClick={goToDetails} className="w-full text-left bg-black text-white px-4 py-3 rounded-2xl">
-                                Details
-                            </button>
-
-                            <button onClick={goToCourses} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                {role === "ADMIN" ? "Manage" : "Courses"}
-                            </button>
-
-                            {role !== "ADMIN" && (
-                                <>
-                                    <button onClick={goToQuizzes} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                        Quizzes
-                                    </button>
-
-                                    <button
-                                        onClick={goToChat}
-                                        className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
-                                    >
-                                        <span>Chat</span>
-                                        {hasChatUnread && <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>}
-                                    </button>
-                                </>
-                            )}
-
-                            {role === "USER" && (
-                                <button
-                                    onClick={goToNotifications}
-                                    className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
-                                >
-                                    <span>Notifications</span>
-                                    {hasUnread && <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>}
-                                </button>
-                            )}
+                        <div className="rounded-[2rem] bg-gradient-to-br from-green-50 to-white border border-green-100 p-6 shadow-sm">
+                            <div className="w-12 h-12 rounded-2xl bg-green-600 text-white flex items-center justify-center mb-4">
+                                <UserCheck size={22} />
+                            </div>
+                            <p className="text-gray-500 text-sm">Current admin</p>
+                            <h3 className="text-lg font-black break-all">{email}</h3>
                         </div>
                     </div>
 
-                    <button onClick={logout} className="w-full bg-red-500 text-white px-4 py-3 rounded-2xl">
-                        Logout
-                    </button>
-                </aside>
-
-                <main className="col-span-12 md:col-span-9 p-6">
-                    <div className="flex justify-between items-center mb-6">
-                        <div>
-                            <p className="text-sm text-gray-500">Dashboard</p>
-                            <h2 className="text-3xl font-bold">
-                                {role === "ADMIN" ? "Admin Management" : `${role} Details`}
-                            </h2>
+                    <div className="rounded-[2rem] bg-white border border-gray-100 p-6 shadow-sm">
+                        <div className="flex items-center justify-between mb-5">
+                            <div>
+                                <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Admin Center</p>
+                                <h3 className="text-2xl font-black">Manage Accounts</h3>
+                            </div>
                         </div>
 
-                        <button onClick={logout} className="md:hidden bg-red-500 text-white px-4 py-2 rounded-full">
-                            Logout
-                        </button>
+                        {users.length === 0 ? (
+                            <p className="text-gray-500">No users found.</p>
+                        ) : (
+                            <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-2">
+                                {users.map((user) => (
+                                    <div key={user.id} className="group bg-gray-50 hover:bg-gray-100 rounded-3xl p-4 flex justify-between items-center gap-3 transition">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-12 h-12 rounded-2xl bg-white border flex items-center justify-center font-black">
+                                                {(user.username || user.email || "U").charAt(0).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <p className="font-black">{user.username}</p>
+                                                <p className="text-sm text-gray-500 break-all">{user.email}</p>
+                                                <span className="inline-flex mt-1 text-xs font-bold bg-white border px-3 py-1 rounded-full">{user.role}</span>
+                                            </div>
+                                        </div>
+
+                                        {user.email !== email && (
+                                            <button onClick={() => deleteUser(user.id)} className="inline-flex items-center gap-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-4 py-2 rounded-2xl text-sm font-bold transition">
+                                                <Trash2 size={16} />
+                                                Delete
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
-                    {role === "ADMIN" ? (
-                        <section className="bg-[#f7f7f7] rounded-[2rem] p-6">
-                            <div className="bg-white rounded-3xl p-5 shadow-sm mb-6">
-                                <h4 className="text-xl font-bold mb-4">Manage Accounts</h4>
+                    <div className="rounded-[2rem] bg-white border border-gray-100 p-6 shadow-sm">
+                        <h3 className="text-2xl font-black mb-5">Pending Admin Requests</h3>
 
-                                {users.length === 0 ? (
-                                    <p className="text-gray-500">No users found.</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {users.map((user) => (
-                                            <div
-                                                key={user.id}
-                                                className="bg-[#f7f7f7] rounded-2xl p-4 flex justify-between items-center gap-3"
-                                            >
-                                                <div>
-                                                    <p className="font-semibold">{user.username}</p>
-                                                    <p className="text-sm text-gray-500">{user.email}</p>
-                                                    <p className="text-sm font-semibold">{user.role}</p>
-                                                </div>
-
-                                                {user.email !== email && (
-                                                    <button
-                                                        onClick={() => deleteUser(user.id)}
-                                                        className="bg-red-500 text-white px-4 py-2 rounded-full text-sm"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="bg-white rounded-3xl p-5 shadow-sm">
-                                <h4 className="text-xl font-bold mb-4">Pending Admin Requests</h4>
-
-                                {adminRequests.length === 0 ? (
-                                    <p className="text-gray-500">No pending admin requests.</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {adminRequests.map((request) => (
-                                            <div
-                                                key={request.id}
-                                                className="bg-[#f7f7f7] rounded-2xl p-4 flex justify-between items-center gap-3"
-                                            >
-                                                <div>
-                                                    <p className="font-semibold">{request.username}</p>
-                                                    <p className="text-sm text-gray-500">{request.email}</p>
-                                                    <p className="text-sm font-semibold">{request.status}</p>
-                                                </div>
-
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => approveAdminRequest(request.id)}
-                                                        className="bg-green-500 text-white px-4 py-2 rounded-full text-sm"
-                                                    >
-                                                        Approve
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => rejectAdminRequest(request.id)}
-                                                        className="bg-red-500 text-white px-4 py-2 rounded-full text-sm"
-                                                    >
-                                                        Reject
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </section>
-                    ) : (
-                        <section className="bg-[#f7f7f7] rounded-[2rem] p-8">
-                            <p className="text-gray-500 mb-2">Account Details</p>
-
-                            <h3 className="text-4xl font-bold mb-6">
-                                {role === "USER" ? "Your Learning Summary" : "Instructor Summary"}
-                            </h3>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                    <p className="text-sm text-gray-500">Email</p>
-                                    <p className="font-semibold break-all">{email}</p>
-                                </div>
-
-                                <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                    <p className="text-sm text-gray-500">Role</p>
-                                    <p className="font-semibold">
-                                        {role.charAt(0) + role.slice(1).toLowerCase()}
-                                    </p>
-                                </div>
-                            </div>
-                            {role === "USER" && (
-                                <div className="bg-white rounded-3xl p-5 shadow-sm">
-                                    <h4 className="text-xl font-bold mb-4">
-                                        This Week Performance
-                                    </h4>
-
-                                    <div className="space-y-3">
-                                        <div className="bg-[#f7f7f7] rounded-2xl p-4">
-                                            <p className="text-sm text-gray-500">
-                                                Lectures completed this week
-                                            </p>
-                                            <p className="text-2xl font-bold">
-                                                {weeklyCompletedCount}
-                                            </p>
+                        {adminRequests.length === 0 ? (
+                            <div className="rounded-3xl bg-gray-50 p-8 text-center text-gray-500">No pending admin requests.</div>
+                        ) : (
+                            <div className="space-y-3">
+                                {adminRequests.map((request) => (
+                                    <div key={request.id} className="bg-gray-50 rounded-3xl p-4 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                                        <div>
+                                            <p className="font-black">{request.username}</p>
+                                            <p className="text-sm text-gray-500">{request.email}</p>
+                                            <p className="text-xs font-bold mt-1 bg-white border px-3 py-1 rounded-full inline-flex">{request.status}</p>
                                         </div>
 
-                                        <div className="bg-[#f7f7f7] rounded-2xl p-4">
-                                            <p className="text-sm text-gray-500">
-                                                Last visited course
-                                            </p>
-                                            <p className="font-semibold">
-                                                {lastVisitedCourse}
-                                            </p>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => approveAdminRequest(request.id)} className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-2xl text-sm font-bold transition">
+                                                <Check size={16} />
+                                                Approve
+                                            </button>
+
+                                            <button onClick={() => rejectAdminRequest(request.id)} className="inline-flex items-center gap-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-4 py-2 rounded-2xl text-sm font-bold transition">
+                                                <X size={16} />
+                                                Reject
+                                            </button>
                                         </div>
                                     </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </section>
+            ) : (
+                <section className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+                        <div className="rounded-[2rem] bg-white border border-gray-100 p-6 shadow-sm">
+                            <Mail className="mb-4" size={24} />
+                            <p className="text-gray-500 text-sm">Email</p>
+                            <p className="font-black break-all">{email}</p>
+                        </div>
+
+                        <div className="rounded-[2rem] bg-gradient-to-br from-purple-50 to-white border border-purple-100 p-6 shadow-sm">
+                            <Shield className="mb-4 text-purple-600" size={24} />
+                            <p className="text-gray-500 text-sm">Role</p>
+                            <p className="font-black">{role.charAt(0) + role.slice(1).toLowerCase()}</p>
+                        </div>
+
+                        {role === "USER" && (
+                            <>
+                                <div className="rounded-[2rem] bg-gradient-to-br from-green-50 to-white border border-green-100 p-6 shadow-sm">
+                                    <TrendingUp className="mb-4 text-green-600" size={24} />
+                                    <p className="text-gray-500 text-sm">Completed this week</p>
+                                    <h3 className="text-3xl font-black">{weeklyCompletedCount}</h3>
                                 </div>
-                            )}
-                            {role === "USER" && (
 
+                                <div className="rounded-[2rem] bg-gradient-to-br from-blue-50 to-white border border-blue-100 p-6 shadow-sm">
+                                    <Clock3 className="mb-4 text-blue-600" size={24} />
+                                    <p className="text-gray-500 text-sm">Last visited</p>
+                                    <p className="font-black">{lastVisitedCourse}</p>
+                                </div>
+                            </>
+                        )}
 
-                                <div className="bg-white rounded-3xl p-5 shadow-sm">
-                                    <h4 className="text-xl font-bold mb-4">
-                                        Enrolled Courses
-                                    </h4>
+                        {role === "INSTRUCTOR" && (
+                            <div className="rounded-[2rem] bg-gradient-to-br from-blue-50 to-white border border-blue-100 p-6 shadow-sm">
+                                <BookOpen className="mb-4 text-blue-600" size={24} />
+                                <p className="text-gray-500 text-sm">Created courses</p>
+                                <h3 className="text-3xl font-black">{courseStats.length}</h3>
+                            </div>
+                        )}
+                    </div>
 
-                                    {courses.length === 0 ? (
-                                        <p className="text-gray-500">You are not enrolled in any courses yet.</p>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {courses.map((course) => (
-                                                <div key={course.id} className="bg-[#f7f7f7] rounded-2xl p-4">
-                                                    <p className="font-semibold">{course.title}</p>
-                                                    <p className="text-sm text-gray-500">{course.category}</p>
-                                                </div>
-                                            ))}
+                    {role === "USER" && (
+                        <div className="rounded-[2rem] bg-white border border-gray-100 p-6 shadow-sm">
+                            <h3 className="text-2xl font-black mb-5">Enrolled Courses</h3>
+
+                            {courses.length === 0 ? (
+                                <div className="rounded-3xl bg-gray-50 p-8 text-center text-gray-500">You are not enrolled in any courses yet.</div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {courses.map((course) => (
+                                        <div key={course.id} className="group rounded-3xl bg-gray-50 hover:bg-gray-100 p-5 transition">
+                                            <p className="font-black text-lg">{course.title}</p>
+                                            <p className="text-sm text-gray-500 mt-1">{course.category}</p>
                                         </div>
-                                    )}
-                                </div>
-
-                            )}
-
-                            {role === "INSTRUCTOR" && (
-                                <div className="bg-white rounded-3xl p-5 shadow-sm">
-                                    <h4 className="text-xl font-bold mb-4">
-                                        Course Performance
-                                    </h4>
-
-                                    {courseStats.length === 0 ? (
-                                        <p className="text-gray-500">No courses created yet.</p>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {courseStats.map((course) => (
-                                                <div key={course.id} className="bg-[#f7f7f7] rounded-2xl p-4 flex justify-between items-center">
-                                                    <div>
-                                                        <p className="font-semibold">{course.title}</p>
-                                                        <p className="text-sm text-gray-500">{course.category}</p>
-                                                    </div>
-
-                                                    <p className="text-sm font-bold">
-                                                        {course.enrolledCount} enrolled
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    ))}
                                 </div>
                             )}
-                        </section>
+                        </div>
                     )}
-                </main>
-            </div>
-        </div>
+
+                    {role === "INSTRUCTOR" && (
+                        <div className="rounded-[2rem] bg-white border border-gray-100 p-6 shadow-sm">
+                            <h3 className="text-2xl font-black mb-5">Course Performance</h3>
+
+                            {courseStats.length === 0 ? (
+                                <div className="rounded-3xl bg-gray-50 p-8 text-center text-gray-500">No courses created yet.</div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {courseStats.map((course) => (
+                                        <div key={course.id} className="bg-gray-50 hover:bg-gray-100 rounded-3xl p-5 flex justify-between items-center transition">
+                                            <div>
+                                                <p className="font-black">{course.title}</p>
+                                                <p className="text-sm text-gray-500">{course.category}</p>
+                                            </div>
+
+                                            <span className="inline-flex items-center gap-2 bg-white border px-4 py-2 rounded-2xl text-sm font-black">
+                                                <Users size={16} />
+                                                {course.enrolledCount} enrolled
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </section>
+            )}
+        </DashboardLayout>
     );
 }
 

@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import API_URL from "../api";
+import DashboardLayout from "../components/DashboardLayout";
+import { MessageCircle, Send, BookOpen, Users, Circle } from "lucide-react";
 
 function ChatPage() {
     const navigate = useNavigate();
@@ -60,7 +63,8 @@ function ChatPage() {
 
     const loadUnread = async () => {
         const res = await fetch(
-            "http://localhost:8080/chat/has-unread/" +
+
+            `${API_URL}/chat/has-unread/`+
             encodeURIComponent(email),
             {
                 headers: authHeaders(),
@@ -74,7 +78,7 @@ function ChatPage() {
     const loadCourses = async () => {
         if (role === "INSTRUCTOR") {
             const res = await fetch(
-                "http://localhost:8080/courses/instructor/" +
+                `${API_URL}/courses/instructor/`+
                 encodeURIComponent(email),
                 {
                     headers: authHeaders(),
@@ -87,29 +91,27 @@ function ChatPage() {
             return;
         }
 
-        const courseRes = await fetch("http://localhost:8080/courses/all", {
-            headers: authHeaders(),
-        });
-
-        const allCourses = await courseRes.json();
-
         const enrollRes = await fetch(
-            "http://localhost:8080/enrollments/user/" +
-            encodeURIComponent(email),
+            `${API_URL}/enrollments/user/` + encodeURIComponent(email),
             {
                 headers: authHeaders(),
             }
         );
 
         const enrollmentData = await enrollRes.json();
-        setEnrollments(enrollmentData);
+
+        const courseRes = await fetch(`${API_URL}/courses/all`, {
+            headers: authHeaders(),
+        });
+
+        const allCourses = await courseRes.json();
 
         const enrolledCourses = allCourses.filter((course) =>
             enrollmentData.some((enrollment) => enrollment.courseId === course.id)
         );
 
         setCourses(enrolledCourses);
-        loadCourseUnread(enrolledCourses);
+        await loadCourseUnread(enrolledCourses);
     };
 
     const loadCourseUnread = async (courseList) => {
@@ -117,7 +119,7 @@ function ChatPage() {
 
         for (const course of courseList) {
             const res = await fetch(
-                "http://localhost:8080/chat/has-unread/" +
+                `${API_URL}/chat/has-unread/` +
                 course.id +
                 "/" +
                 encodeURIComponent(email),
@@ -136,7 +138,7 @@ function ChatPage() {
     const loadMessages = async (courseId) => {
         setSelectedCourseId(courseId);
 
-        const res = await fetch("http://localhost:8080/chat/course/" + courseId, {
+        const res = await fetch(`${API_URL}/chat/course/` + courseId, {
             headers: authHeaders(),
         });
 
@@ -144,7 +146,7 @@ function ChatPage() {
         setMessages(data);
 
         await fetch(
-            "http://localhost:8080/chat/seen/" +
+            `${API_URL}/chat/seen/` +
             courseId +
             "/" +
             encodeURIComponent(email),
@@ -172,7 +174,7 @@ function ChatPage() {
             return;
         }
 
-        const res = await fetch("http://localhost:8080/chat/send", {
+        const res = await fetch(`${API_URL}/chat/send`, {
             method: "POST",
             headers: authJsonHeaders(),
             body: JSON.stringify({
@@ -204,153 +206,124 @@ function ChatPage() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#ededed] p-4">
-            <div className="min-h-[calc(100vh-2rem)] bg-white rounded-[2rem] shadow-xl grid grid-cols-12 overflow-hidden">
-                <aside className="hidden md:flex md:col-span-3 bg-[#f7f7f7] p-6 flex-col justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold mb-8">E-Learn</h1>
-
-                        <div className="space-y-3">
-                            <button onClick={goToProfile} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                Profile
-                            </button>
-
-                            <button onClick={goToDetails} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                Details
-                            </button>
-
-                            <button onClick={goToCourses} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                Courses
-                            </button>
-
-                            <button onClick={goToQuizzes} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                Quizzes
-                            </button>
-                            <button
-                                onClick={goToChat}
-                                className="w-full text-left bg-black text-white px-4 py-3 rounded-2xl flex justify-between items-center"
-                            >
-                                <span>Chat</span>
-
-                                {hasUnread && (
-                                    <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                                )}
-                            </button>
-                            {role === "USER" && (
-                                <button onClick={goToNotifications} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                    Notifications
-                                </button>
-                            )}
-
-
+        <DashboardLayout activePage="Chat" hasChatUnread={hasUnread}>
+            <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="rounded-[2rem] bg-white border border-gray-100 shadow-sm p-6">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center">
+                            <BookOpen size={22} />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Channels</p>
+                            <h3 className="text-xl font-black">Courses</h3>
                         </div>
                     </div>
 
-                    <button onClick={logout} className="w-full bg-red-500 text-white px-4 py-3 rounded-2xl">
-                        Logout
-                    </button>
-                </aside>
+                    {courses.length === 0 ? (
+                        <div className="rounded-3xl bg-gray-50 p-8 text-center text-gray-500">
+                            {role === "USER" ? "Enroll in a course to chat." : "Create a course to chat."}
+                        </div>
+                    ) : (
+                        <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-2">
+                            {courses.map((course) => (
+                                <button
+                                    key={course.id}
+                                    onClick={() => loadMessages(course.id)}
+                                    className={
+                                        selectedCourseId === course.id
+                                            ? "w-full text-left bg-black text-white rounded-3xl p-4 flex justify-between items-center shadow-lg transition"
+                                            : "w-full text-left bg-gray-50 hover:bg-gray-100 rounded-3xl p-4 flex justify-between items-center transition"
+                                    }
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={selectedCourseId === course.id ? "w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center" : "w-10 h-10 rounded-2xl bg-white border flex items-center justify-center"}>
+                                            <MessageCircle size={18} />
+                                        </div>
+                                        <div>
+                                            <p className="font-black">{course.title}</p>
+                                            <p className={selectedCourseId === course.id ? "text-xs text-white/60" : "text-xs text-gray-500"}>{course.category || "Course chat"}</p>
+                                        </div>
+                                    </div>
 
-                <main className="col-span-12 md:col-span-9 p-6">
-                    <div className="mb-6">
-                        <p className="text-sm text-gray-500">Dashboard</p>
-                        <h2 className="text-3xl font-bold">{role} Chat</h2>
-                    </div>
+                                    {courseUnread[course.id] && <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-                    <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                        <div className="bg-[#f7f7f7] rounded-[2rem] p-6">
-                            <h3 className="text-xl font-bold mb-4">Courses</h3>
+                <div className="xl:col-span-2 rounded-[2rem] bg-white border border-gray-100 shadow-sm p-6 flex flex-col h-[78vh]">
+                    {!selectedCourseId ? (
+                        <div className="flex-1 rounded-3xl bg-gray-50 flex flex-col items-center justify-center text-center p-8">
+                            <div className="w-16 h-16 rounded-3xl bg-black text-white flex items-center justify-center mb-4">
+                                <MessageCircle size={28} />
+                            </div>
+                            <h3 className="text-2xl font-black">Open a course chat</h3>
+                            <p className="text-gray-500 mt-2">Select a course from the left to start messaging.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+                                <div>
+                                    <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Live Discussion</p>
+                                    <h3 className="text-xl font-black">Course Chat</h3>
+                                </div>
+                                <span className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-2xl text-sm font-bold">
+                                    <Circle size={10} fill="currentColor" />
+                                    Active
+                                </span>
+                            </div>
 
-                            {courses.length === 0 ? (
-                                <p className="text-gray-500">
-                                    {role === "USER"
-                                        ? "Enroll in a course to chat."
-                                        : "Create a course to chat."}
-                                </p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {courses.map((course) => (
-                                        <button
-                                            key={course.id}
-                                            onClick={() => loadMessages(course.id)}
+                            <div className="flex-1 overflow-y-auto space-y-3 pr-2 bg-gray-50 rounded-3xl p-4">
+                                {messages.length === 0 ? (
+                                    <p className="text-gray-500 text-center mt-8">No messages yet.</p>
+                                ) : (
+                                    messages.map((msg) => (
+                                        <div
+                                            key={msg.id}
                                             className={
-                                                selectedCourseId === course.id
-                                                    ? "w-full text-left bg-black text-white rounded-2xl p-4 flex justify-between items-center"
-                                                    : "w-full text-left bg-white rounded-2xl p-4 shadow-sm flex justify-between items-center"
+                                                msg.senderEmail === email
+                                                    ? "bg-black text-white rounded-3xl p-4 ml-auto max-w-[78%] shadow-md"
+                                                    : "bg-white rounded-3xl p-4 max-w-[78%] shadow-sm border border-gray-100"
                                             }
                                         >
-                                            <span>{course.title}</span>
+                                            <p className="text-xs opacity-70 mb-1 font-bold">
+                                                {msg.senderName} ({msg.senderRole})
+                                            </p>
 
-                                            {courseUnread[course.id] && (
-                                                <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                                            <p>{msg.message}</p>
 
-                        <div className="lg:col-span-2 bg-[#f7f7f7] rounded-[2rem] p-6 flex flex-col h-[75vh]">
-                            {!selectedCourseId ? (
-                                <p className="text-gray-500">Select a course to open chat.</p>
-                            ) : (
-                                <>
-                                    <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-                                        {messages.length === 0 ? (
-                                            <p className="text-gray-500">No messages yet.</p>
-                                        ) : (
-                                            messages.map((msg) => (
-                                                <div
-                                                    key={msg.id}
-                                                    className={
-                                                        msg.senderEmail === email
-                                                            ? "bg-black text-white rounded-3xl p-4 ml-auto max-w-[75%]"
-                                                            : "bg-white rounded-3xl p-4 max-w-[75%] shadow-sm"
-                                                    }
-                                                >
-                                                    <p className="text-xs opacity-70 mb-1">
-                                                        {msg.senderName} ({msg.senderRole})
-                                                    </p>
+                                            <p className="text-xs opacity-60 mt-2">
+                                                {msg.createdAt ? msg.createdAt.replace("T", " ").slice(0, 16) : ""}
+                                            </p>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
 
-                                                    <p>{msg.message}</p>
+                            <div className="mt-4 flex gap-3">
+                                <input
+                                    value={messageText}
+                                    onChange={(e) => setMessageText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            sendMessage();
+                                        }
+                                    }}
+                                    placeholder="Type a message..."
+                                    className="flex-1 bg-gray-50 border border-gray-200 px-4 py-3 rounded-2xl outline-none focus:border-black"
+                                />
 
-                                                    <p className="text-xs opacity-60 mt-2">
-                                                        {msg.createdAt
-                                                            ? msg.createdAt.replace("T", " ").slice(0, 16)
-                                                            : ""}
-                                                    </p>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-
-                                    <div className="mt-4 flex gap-3">
-                                        <input
-                                            value={messageText}
-                                            onChange={(e) => setMessageText(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter") {
-                                                    sendMessage();
-                                                }
-                                            }}
-                                            placeholder="Type a message..."
-                                            className="flex-1 bg-white border border-gray-200 px-4 py-3 rounded-2xl outline-none"
-                                        />
-
-                                        <button
-                                            onClick={sendMessage}
-                                            className="bg-black text-white px-6 py-3 rounded-2xl"
-                                        >
-                                            Send
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </section>
-                </main>
-            </div>
-        </div>
+                                <button onClick={sendMessage} className="inline-flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-2xl font-black transition">
+                                    <Send size={18} />
+                                    Send
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </section>
+        </DashboardLayout>
     );
 }
 

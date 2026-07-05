@@ -1,5 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import API_URL from "../api";
+import DashboardLayout from "../components/DashboardLayout";
+import { User, Mail, Shield, Pencil, Save, X, Sparkles } from "lucide-react";
 
 function ProfilePage() {
     const navigate = useNavigate();
@@ -70,7 +73,7 @@ function ProfilePage() {
 
     const loadProfile = async () => {
         const res = await fetch(
-            "http://localhost:8080/auth/profile/user/" + encodeURIComponent(email),
+            `${API_URL}/auth/profile/user/` + encodeURIComponent(email),
             {
                 headers: authHeaders(),
             }
@@ -94,7 +97,7 @@ function ProfilePage() {
             return;
         }
 
-        const res = await fetch("http://localhost:8080/auth/profile/update", {
+        const res = await fetch(`${API_URL}/auth/profile/update`, {
             method: "PUT",
             headers: authJsonHeaders(),
             body: JSON.stringify({
@@ -119,7 +122,7 @@ function ProfilePage() {
         if (role !== "USER") return;
 
         const res = await fetch(
-            "http://localhost:8080/notifications/has-unread/" +
+            `${API_URL}/notifications/has-unread/` +
             encodeURIComponent(email),
             {
                 headers: authHeaders(),
@@ -134,7 +137,7 @@ function ProfilePage() {
         if (role === "ADMIN") return;
 
         const res = await fetch(
-            "http://localhost:8080/chat/has-unread/" +
+            `${API_URL}/chat/has-unread/` +
             encodeURIComponent(email),
             {
                 headers: authHeaders(),
@@ -157,149 +160,102 @@ function ProfilePage() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#ededed] p-4">
-            <div className="min-h-[calc(100vh-2rem)] bg-white rounded-[2rem] shadow-xl grid grid-cols-12 overflow-hidden">
-                <aside className="hidden md:flex md:col-span-3 bg-[#f7f7f7] p-6 flex-col justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold mb-8">E-Learn</h1>
+        <DashboardLayout activePage="Profile" hasUnread={hasUnread} hasChatUnread={hasChatUnread}>
+            <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div className="xl:col-span-2 rounded-[2rem] bg-white border border-gray-100 shadow-sm p-7 hover:shadow-md transition">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-7">
+                        <div className="flex items-center gap-4">
+                            <div className="w-20 h-20 rounded-3xl bg-black text-white flex items-center justify-center text-3xl font-bold shadow-lg">
+                                {(username || email || "U").charAt(0).toUpperCase()}
+                            </div>
 
-                        <div className="space-y-3">
-                            <button onClick={goToProfile} className="w-full text-left bg-black text-white px-4 py-3 rounded-2xl">
-                                Profile
-                            </button>
-
-                            <button onClick={goToDetails} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                Details
-                            </button>
-
-                            <button
-                                onClick={goToCourses}
-                                className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm"
-                            >
-                                {role === "ADMIN" ? "Manage" : "Courses"}
-                            </button>
-
-                            <button onClick={goToQuizzes} className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm">
-                                Quizzes
-                            </button>
-
-                            {role !== "ADMIN" && (
-                                <button
-                                    onClick={goToChat}
-                                    className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
-                                >
-                                    <span>Chat</span>
-
-                                    {hasChatUnread && (
-                                        <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                                    )}
-                                </button>
-                            )}
-
-                            {role === "USER" && (
-                                <button
-                                    onClick={goToNotifications}
-                                    className="w-full text-left bg-white px-4 py-3 rounded-2xl shadow-sm flex justify-between items-center"
-                                >
-                                    <span>Notifications</span>
-                                    {hasUnread && (
-                                        <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                                    )}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    <button onClick={logout} className="w-full bg-red-500 text-white px-4 py-3 rounded-2xl">
-                        Logout
-                    </button>
-                </aside>
-
-                <main className="col-span-12 md:col-span-9 p-6">
-                    <div className="flex justify-between items-center mb-6">
-                        <div>
-                            <p className="text-sm text-gray-500">Dashboard</p>
-                            <h2 className="text-3xl font-bold">{formatRole(role)} Profile</h2>
+                            <div>
+                                <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Account Overview</p>
+                                <h3 className="text-3xl font-black text-gray-950 mt-1">{username || "Your Profile"}</h3>
+                                <p className="text-gray-500 text-sm break-all">{email}</p>
+                            </div>
                         </div>
 
-                        <button onClick={logout} className="md:hidden bg-red-500 text-white px-4 py-2 rounded-full">
-                            Logout
+                        <button
+                            onClick={() => setEditingProfile(!editingProfile)}
+                            className={
+                                editingProfile
+                                    ? "inline-flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-black px-5 py-3 rounded-2xl font-bold transition"
+                                    : "inline-flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-5 py-3 rounded-2xl font-bold transition shadow-lg"
+                            }
+                        >
+                            {editingProfile ? <X size={18} /> : <Pencil size={18} />}
+                            {editingProfile ? "Cancel" : "Edit Profile"}
                         </button>
                     </div>
 
-                    <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                        <div className="lg:col-span-2 bg-[#f7f7f7] rounded-[2rem] p-8">
-                            <div className="flex justify-between items-center mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rounded-3xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 p-5">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-11 h-11 rounded-2xl bg-black text-white flex items-center justify-center">
+                                    <User size={20} />
+                                </div>
                                 <div>
-                                    <p className="text-gray-500 mb-2">Account Overview</p>
-                                    <h3 className="text-4xl font-bold">Welcome back.</h3>
-                                </div>
-
-                                <button
-                                    onClick={() => setEditingProfile(!editingProfile)}
-                                    className="bg-black text-white px-5 py-2 rounded-full"
-                                >
-                                    {editingProfile ? "Cancel" : "Edit Profile"}
-                                </button>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                    <p className="text-sm text-gray-500">Username</p>
-
-                                    {editingProfile ? (
-                                        <div className="flex gap-3 mt-2">
-                                            <input
-                                                value={updatedUsername}
-                                                onChange={(e) => setUpdatedUsername(e.target.value)}
-                                                className="flex-1 bg-[#f7f7f7] border border-gray-200 px-4 py-3 rounded-2xl outline-none"
-                                            />
-
-                                            <button
-                                                onClick={updateProfile}
-                                                className="bg-green-500 text-white px-5 py-2 rounded-2xl"
-                                            >
-                                                Save
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <p className="font-semibold">{username || "Not set"}</p>
-                                    )}
-                                </div>
-
-                                <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                    <p className="text-sm text-gray-500">Email</p>
-                                    <p className="font-semibold">{email}</p>
-                                </div>
-
-                                <div className="bg-white rounded-2xl p-5 shadow-sm">
-                                    <p className="text-sm text-gray-500">Role</p>
-                                    <p className="font-semibold">{formatRole(role)}</p>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Username</p>
+                                    <p className="text-sm text-gray-500">Public display name</p>
                                 </div>
                             </div>
+
+                            {editingProfile ? (
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <input
+                                        value={updatedUsername}
+                                        onChange={(e) => setUpdatedUsername(e.target.value)}
+                                        className="flex-1 bg-white border border-gray-200 px-4 py-3 rounded-2xl outline-none focus:border-black"
+                                    />
+
+                                    <button
+                                        onClick={updateProfile}
+                                        className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-2xl font-bold transition"
+                                    >
+                                        <Save size={18} />
+                                        Save
+                                    </button>
+                                </div>
+                            ) : (
+                                <p className="text-xl font-black">{username || "Not set"}</p>
+                            )}
                         </div>
 
-                        <div className="bg-[#f7f7f7] rounded-[2rem] p-6">
-                            <h3 className="font-bold text-xl mb-4">Quick Info</h3>
-
-                            <div className="space-y-3">
-                                <div className="bg-white rounded-2xl p-4 shadow-sm">
-                                    Secure JWT login
+                        <div className="rounded-3xl bg-gradient-to-br from-blue-50 to-white border border-blue-100 p-5">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center">
+                                    <Mail size={20} />
                                 </div>
-
-                                <div className="bg-white rounded-2xl p-4 shadow-sm">
-                                    Role-based dashboard
-                                </div>
-
-                                <div className="bg-white rounded-2xl p-4 shadow-sm">
-                                    Protected routes enabled
+                                <div>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Email</p>
+                                    <p className="text-sm text-gray-500">Login identity</p>
                                 </div>
                             </div>
+
+                            <p className="text-lg font-bold break-all">{email}</p>
                         </div>
-                    </section>
-                </main>
-            </div>
-        </div>
+
+                        <div className="md:col-span-2 rounded-3xl bg-gradient-to-br from-purple-50 to-white border border-purple-100 p-5">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-11 h-11 rounded-2xl bg-purple-600 text-white flex items-center justify-center">
+                                    <Shield size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Role</p>
+                                    <p className="text-sm text-gray-500">Your dashboard permission</p>
+                                </div>
+                            </div>
+
+                            <span className="inline-flex px-4 py-2 rounded-2xl bg-white border border-purple-100 font-black">
+                                {formatRole(role)}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </DashboardLayout>
     );
 }
 
