@@ -400,8 +400,42 @@ function CoursesPage() {
         const res = await fetch(`${API_URL}/courses/all`, {
             headers: authHeaders(),
         });
+
         const data = await res.json();
-        setCourses(sortNewestFirst(data));
+
+        const coursesWithCounts = await Promise.all(
+            data.map(async (course) => {
+                try {
+                    const enrollRes = await fetch(
+                        `${API_URL}/enrollments/course/` + course.id,
+                        {
+                            headers: authHeaders(),
+                        }
+                    );
+
+                    if (!enrollRes.ok) {
+                        return {
+                            ...course,
+                            enrolledCount: 0,
+                        };
+                    }
+
+                    const enrollments = await enrollRes.json();
+
+                    return {
+                        ...course,
+                        enrolledCount: enrollments.length,
+                    };
+                } catch {
+                    return {
+                        ...course,
+                        enrolledCount: 0,
+                    };
+                }
+            })
+        );
+
+        setCourses(sortNewestFirst(coursesWithCounts));
     };
 
     const loadUserEnrollments = async () => {
