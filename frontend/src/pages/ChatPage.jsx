@@ -5,13 +5,12 @@ import DashboardLayout from "../components/DashboardLayout";
 import { MessageCircle, Send, BookOpen, Users, Circle } from "lucide-react";
 
 function ChatPage() {
-    const navigate = useNavigate();
+
 
     const role = localStorage.getItem("role");
     const email = localStorage.getItem("email");
 
     const [courses, setCourses] = useState([]);
-    const [enrollments, setEnrollments] = useState([]);
     const [selectedCourseId, setSelectedCourseId] = useState("");
     const [messages, setMessages] = useState([]);
     const [messageText, setMessageText] = useState("");
@@ -27,39 +26,6 @@ function ChatPage() {
         Authorization: "Bearer " + localStorage.getItem("token"),
     });
 
-    const goToProfile = () => {
-        if (role === "USER") navigate("/user/profile");
-        if (role === "INSTRUCTOR") navigate("/instructor/profile");
-    };
-
-    const goToDetails = () => {
-        if (role === "USER") navigate("/user/details");
-        if (role === "INSTRUCTOR") navigate("/instructor/details");
-    };
-
-    const goToCourses = () => {
-        if (role === "USER") navigate("/user/courses");
-        if (role === "INSTRUCTOR") navigate("/instructor/courses");
-    };
-
-    const goToQuizzes = () => {
-        if (role === "USER") navigate("/user/quizzes");
-        if (role === "INSTRUCTOR") navigate("/instructor/quizzes");
-    };
-
-    const goToNotifications = () => {
-        if (role === "USER") navigate("/user/notifications");
-    };
-
-    const goToChat = () => {
-        if (role === "USER") navigate("/user/chat");
-        if (role === "INSTRUCTOR") navigate("/instructor/chat");
-    };
-
-    const logout = () => {
-        localStorage.clear();
-        navigate("/login", { replace: true });
-    };
 
     const loadUnread = async () => {
         const res = await fetch(

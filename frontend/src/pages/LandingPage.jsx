@@ -60,7 +60,7 @@ function LandingPage() {
                         <FeatureCard icon={<Star size={22} />} title="Reviews & Ratings" text="Students can leave useful feedback." tone="from-yellow-50 to-white" />
                         <FeatureCard icon={<LineChart size={22} />} title="Progress Tracking" text="Track completed lectures and activity." tone="from-green-50 to-white" />
                     </aside>
-                    
+
                 </main>
             </div>
         </div>

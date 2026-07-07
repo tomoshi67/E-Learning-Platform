@@ -15,20 +15,60 @@ function RegisterPage() {
 
     const submit = async () => {
         try {
+            setMessage("");
+
             const res = await fetch(`${API_URL}/auth/register`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                },
                 body: JSON.stringify(data),
             });
 
             const text = await res.text();
 
-            if (!res.ok) {
-                setMessage(text || "Registration failed.");
+            if (
+                text.includes("required") ||
+                text.includes("valid") ||
+                text.includes("already") ||
+                text.includes("least") ||
+                text.includes("not") ||
+                text.includes("failed")
+            ) {
+                setMessage(text);
                 return;
             }
 
-            navigate("/login");
+            if (data.role === "ADMIN") {
+                setMessage(text);
+                return;
+            }
+
+            const loginRes = await fetch(`${API_URL}/auth/login`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: data.email,
+                    password: data.password,
+                }),
+            });
+
+            const loginData = await loginRes.json();
+
+            localStorage.setItem("token", loginData.token);
+            localStorage.setItem("role", loginData.role);
+            localStorage.setItem("email", loginData.email);
+
+            if (loginData.role === "USER") {
+                navigate("/user/profile");
+            } else if (loginData.role === "INSTRUCTOR") {
+                navigate("/instructor/profile");
+            } else if (loginData.role === "ADMIN") {
+                navigate("/admin/profile");
+            }
+
         } catch (error) {
             console.error(error);
             setMessage("Request failed. Backend may not be running.");

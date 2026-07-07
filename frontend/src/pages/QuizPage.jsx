@@ -45,45 +45,6 @@ function QuizPage() {
         Authorization: "Bearer " + localStorage.getItem("token"),
     });
 
-    const goToProfile = () => {
-        if (role === "USER") navigate("/user/profile");
-        if (role === "INSTRUCTOR") navigate("/instructor/profile");
-        if (role === "ADMIN") navigate("/admin/profile");
-    };
-
-    const goToDetails = () => {
-        if (role === "USER") navigate("/user/details");
-        if (role === "INSTRUCTOR") navigate("/instructor/details");
-        if (role === "ADMIN") navigate("/admin/details");
-    };
-
-    const goToCourses = () => {
-        if (role === "USER") navigate("/user/courses");
-        if (role === "INSTRUCTOR") navigate("/instructor/courses");
-        if (role === "ADMIN") navigate("/admin/courses");
-    };
-
-    const goToQuizzes = () => {
-        if (role === "USER") navigate("/user/quizzes");
-        if (role === "INSTRUCTOR") navigate("/instructor/quizzes");
-        if (role === "ADMIN") navigate("/admin/quizzes");
-    };
-    const goToNotifications = () => {
-        if (role === "USER") navigate("/user/notifications");
-        if (role === "INSTRUCTOR") navigate("/instructor/notifications");
-    };
-    const goToChat = () => {
-        if (role === "USER") navigate("/user/chat");
-        if (role === "INSTRUCTOR") navigate("/instructor/chat");
-    };
-
-    const logout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
-        localStorage.removeItem("email");
-        navigate("/login", { replace: true });
-    };
-
     const loadQuizAttempts = async () => {
         if (role !== "USER") {
             return;
@@ -357,8 +318,6 @@ function QuizPage() {
         if (attempt) {
             setScore(attempt.score);
 
-            // If backend ever sends saved answers, restore them.
-            // If not, we avoid showing "Not answered" for old attempts.
             if (attempt.answers) {
                 try {
                     const parsedAnswers = typeof attempt.answers === "string"

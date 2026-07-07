@@ -39,7 +39,6 @@ function CoursesPage() {
     const [progressList, setProgressList] = useState([]);
     const [activeCoursePanel, setActiveCoursePanel] = useState({});
     const [hasUnread, setHasUnread] = useState(false);
-    const [hasChatUnread, setHasChatUnread] = useState(false);
     const [instructors, setInstructors] = useState([]);
     const [selectedInstructorEmail, setSelectedInstructorEmail] = useState("");
     const [adminCourses, setAdminCourses] = useState([]);
@@ -58,10 +57,7 @@ function CoursesPage() {
         Authorization: "Bearer " + localStorage.getItem("token"),
     });
 
-    const formatRole = (value) => {
-        if (!value) return "";
-        return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
-    };
+
 
     const sortNewestFirst = (list) => {
         return [...list].sort((a, b) => b.id - a.id);
@@ -95,46 +91,6 @@ function CoursesPage() {
         }
 
         return false;
-    };
-
-    const goToProfile = () => {
-        if (role === "USER") navigate("/user/profile");
-        if (role === "INSTRUCTOR") navigate("/instructor/profile");
-        if (role === "ADMIN") navigate("/admin/profile");
-    };
-
-    const goToDetails = () => {
-        if (role === "USER") navigate("/user/details");
-        if (role === "INSTRUCTOR") navigate("/instructor/details");
-        if (role === "ADMIN") navigate("/admin/details");
-    };
-
-    const goToCourses = () => {
-        if (role === "USER") navigate("/user/courses");
-        if (role === "INSTRUCTOR") navigate("/instructor/courses");
-        if (role === "ADMIN") navigate("/admin/courses");
-    };
-
-    const goToQuizzes = () => {
-        if (role === "USER") navigate("/user/quizzes");
-        if (role === "INSTRUCTOR") navigate("/instructor/quizzes");
-        if (role === "ADMIN") navigate("/admin/quizzes");
-    };
-    const goToNotifications = () => {
-        if (role === "USER") navigate("/user/notifications");
-        if (role === "INSTRUCTOR") navigate("/instructor/notifications");
-    };
-    const goToChat = () => {
-        if (role === "USER") navigate("/user/chat");
-        if (role === "INSTRUCTOR") navigate("/instructor/chat");
-    };
-
-    const logout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
-        localStorage.removeItem("email");
-
-        navigate("/login", { replace: true });
     };
 
     const toggleCoursePanel = async (courseId, panelName) => {
@@ -576,22 +532,7 @@ function CoursesPage() {
         const data = await res.json();
         setHasUnread(data);
     };
-    const loadChatUnread = async () => {
-        if (role === "ADMIN") return;
 
-        const email = localStorage.getItem("email");
-
-        const res = await fetch(
-            `${API_URL}/chat/has-unread/` +
-            encodeURIComponent(email),
-            {
-                headers: authHeaders(),
-            }
-        );
-
-        const data = await res.json();
-        setHasChatUnread(data);
-    };
     const loadInstructors = async () => {
         const res = await fetch(`${API_URL}/admin/instructors`, {
             headers: authHeaders(),
@@ -713,7 +654,6 @@ function CoursesPage() {
     useEffect(() => {
         const initializeUnread = async () => {
             await loadUnread();
-            await loadChatUnread();
         };
 
         initializeUnread();
