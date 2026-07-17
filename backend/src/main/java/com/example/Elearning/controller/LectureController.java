@@ -8,7 +8,10 @@ import com.example.Elearning.repository.LectureRepository;
 import com.example.Elearning.repository.NotificationRepository;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.cloudinary.utils.ObjectUtils;
+import com.cloudinary.Cloudinary;
 
+import java.util.Map;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -22,15 +25,19 @@ public class LectureController {
     private final EnrollmentRepository enrollmentRepository;
     private final LectureRepository lectureRepository;
     private final NotificationRepository notificationRepository;
+    private final Cloudinary cloudinary;
 
     public LectureController(
             LectureRepository lectureRepository,
             NotificationRepository notificationRepository,
-            EnrollmentRepository enrollmentRepository
+            EnrollmentRepository enrollmentRepository,
+            Cloudinary cloudinary
     ) {
+
         this.lectureRepository = lectureRepository;
         this.notificationRepository = notificationRepository;
         this.enrollmentRepository = enrollmentRepository;
+        this.cloudinary = cloudinary;
     }
 
     @PostMapping("/upload/{courseId}")
@@ -50,29 +57,24 @@ public class LectureController {
 
         validateFileType(type, originalFileName);
 
-        String uploadDir = System.getProperty("user.dir") + "/uploads/";
+        Map uploadResult = cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap(
+                        "resource_type", "auto"
+                )
+        );
 
-        File folder = new File(uploadDir);
-        if (!folder.exists()) {
-            folder.mkdirs();
-        }
+        String fileUrl = uploadResult.get("secure_url").toString();
 
 
-
-        String finalFileName = getUniqueFileName(uploadDir, originalFileName);
-        String filePath = uploadDir + finalFileName;
-
-        System.out.println("UPLOAD DIR = " + uploadDir);
-        System.out.println("FINAL FILE NAME = " + finalFileName);
-        System.out.println("FILE PATH = " + filePath);
-
-        file.transferTo(new File(filePath));
+        System.out.println("Uploaded to Cloudinary:");
+        System.out.println(fileUrl);
 
         Lecture lecture = new Lecture();
         lecture.setTitle(title);
         lecture.setType(type);
-        lecture.setFileName(finalFileName);
-        lecture.setFilePath(filePath);
+        lecture.setFileName(originalFileName);
+        lecture.setFilePath(fileUrl);
         lecture.setCourseId(courseId);
         lecture.setLectureOrder(lectureOrder);
 

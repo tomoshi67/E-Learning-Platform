@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
+
 import API_URL from "../api";
 import DashboardLayout from "../components/DashboardLayout";
 import { MessageCircle, Send, BookOpen, Users, Circle } from "lucide-react";
 
 function ChatPage() {
 
-
     const role = localStorage.getItem("role");
     const email = localStorage.getItem("email");
+    const token = localStorage.getItem("token");
 
     const [courses, setCourses] = useState([]);
     const [selectedCourseId, setSelectedCourseId] = useState("");
@@ -16,6 +18,18 @@ function ChatPage() {
     const [messageText, setMessageText] = useState("");
     const [courseUnread, setCourseUnread] = useState({});
     const [hasUnread, setHasUnread] = useState(false);
+    const [connected, setConnected] = useState(false);
+
+    // refs so the STOMP callbacks always see the latest values without
+    // having to tear down/rebuild the connection on every render
+    const stompClientRef = useRef(null);
+    const subscriptionRef = useRef(null);
+    const selectedCourseIdRef = useRef("");
+    const emailRef = useRef(email);
+
+    useEffect(() => {
+        selectedCourseIdRef.current = selectedCourseId;
+    }, [selectedCourseId]);
 
     const authHeaders = () => ({
         Authorization: "Bearer " + localStorage.getItem("token"),
@@ -101,8 +115,44 @@ function ChatPage() {
         setCourseUnread(unreadMap);
     };
 
+    // ---------- WebSocket: subscribe to a course's live topic ----------
+    const subscribeToCourse = (courseId) => {
+        const client = stompClientRef.current;
+
+        if (!client || !client.connected) {
+            return; // will get subscribed once onConnect fires, via selectedCourseIdRef
+        }
+
+        if (subscriptionRef.current) {
+            subscriptionRef.current.unsubscribe();
+            subscriptionRef.current = null;
+        }
+
+        subscriptionRef.current = client.subscribe(
+            `/topic/course/${courseId}`,
+            (frame) => {
+                const incoming = JSON.parse(frame.body);
+
+                // only append if this is still the open chat
+                if (String(courseId) === String(selectedCourseIdRef.current)) {
+                    setMessages((prev) => [...prev, incoming]);
+
+                    // mark seen immediately since the user has this chat open
+                    fetch(
+                        `${API_URL}/chat/seen/` + courseId + "/" + encodeURIComponent(emailRef.current),
+                        { method: "PUT", headers: authHeaders() }
+                    );
+                } else {
+                    setCourseUnread((prev) => ({ ...prev, [courseId]: true }));
+                    setHasUnread(true);
+                }
+            }
+        );
+    };
+
     const loadMessages = async (courseId) => {
         setSelectedCourseId(courseId);
+        selectedCourseIdRef.current = courseId;
 
         const res = await fetch(`${API_URL}/chat/course/` + courseId, {
             headers: authHeaders(),
@@ -128,9 +178,11 @@ function ChatPage() {
         });
 
         await loadUnread();
+
+        subscribeToCourse(courseId);
     };
 
-    const sendMessage = async () => {
+    const sendMessage = () => {
         if (!selectedCourseId) {
             alert("Select a course first");
             return;
@@ -140,26 +192,62 @@ function ChatPage() {
             return;
         }
 
-        const res = await fetch(`${API_URL}/chat/send`, {
-            method: "POST",
-            headers: authJsonHeaders(),
+        const client = stompClientRef.current;
+
+        if (!client || !client.connected) {
+            alert("Chat connection lost, reconnecting... try again in a moment.");
+            return;
+        }
+
+        client.publish({
+            destination: `/app/chat.send/${selectedCourseId}`,
             body: JSON.stringify({
-                courseId: selectedCourseId,
                 senderEmail: email,
                 senderRole: role,
                 message: messageText,
             }),
         });
 
-        if (!res.ok) {
-            const errorText = await res.text();
-            alert("Message send failed: " + errorText);
-            return;
-        }
-
+        // the message will come back through the /topic/course/{id} subscription
+        // (including the DB-generated id/timestamp), so we don't append it here
         setMessageText("");
-        await loadMessages(selectedCourseId);
     };
+
+    // ---------- WebSocket connection lifecycle ----------
+    useEffect(() => {
+        const client = new Client({
+            webSocketFactory: () => new SockJS(`${API_URL}/ws-chat`),
+            connectHeaders: {
+                Authorization: "Bearer " + token,
+            },
+            reconnectDelay: 5000,
+            onConnect: () => {
+                setConnected(true);
+
+                // if a course was already open when we (re)connected, resume its subscription
+                if (selectedCourseIdRef.current) {
+                    subscribeToCourse(selectedCourseIdRef.current);
+                }
+            },
+            onDisconnect: () => {
+                setConnected(false);
+            },
+            onStompError: (frame) => {
+                console.error("STOMP error:", frame.headers["message"], frame.body);
+            },
+        });
+
+        stompClientRef.current = client;
+        client.activate();
+
+        return () => {
+            if (subscriptionRef.current) {
+                subscriptionRef.current.unsubscribe();
+            }
+            client.deactivate();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         const initialize = async () => {
@@ -234,9 +322,13 @@ function ChatPage() {
                                     <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Live Discussion</p>
                                     <h3 className="text-xl font-black">Course Chat</h3>
                                 </div>
-                                <span className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-2xl text-sm font-bold">
+                                <span className={
+                                    connected
+                                        ? "inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-2xl text-sm font-bold"
+                                        : "inline-flex items-center gap-2 bg-yellow-50 text-yellow-700 px-4 py-2 rounded-2xl text-sm font-bold"
+                                }>
                                     <Circle size={10} fill="currentColor" />
-                                    Active
+                                    {connected ? "Active" : "Connecting..."}
                                 </span>
                             </div>
 

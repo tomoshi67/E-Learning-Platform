@@ -5,7 +5,6 @@ import DashboardLayout from "../components/DashboardLayout";
 import { Users, BookOpen, TrendingUp, Clock3, Trash2, Check, X, Shield, Mail, UserCheck } from "lucide-react";
 
 function DetailsPage() {
-    const navigate = useNavigate();
 
     const [hasUnread, setHasUnread] = useState(false);
     const [hasChatUnread, setHasChatUnread] = useState(false);
@@ -23,44 +22,6 @@ function DetailsPage() {
     const authHeaders = () => ({
         Authorization: "Bearer " + localStorage.getItem("token"),
     });
-
-    const goToProfile = () => {
-        if (role === "USER") navigate("/user/profile");
-        if (role === "INSTRUCTOR") navigate("/instructor/profile");
-        if (role === "ADMIN") navigate("/admin/profile");
-    };
-
-    const goToDetails = () => {
-        if (role === "USER") navigate("/user/details");
-        if (role === "INSTRUCTOR") navigate("/instructor/details");
-        if (role === "ADMIN") navigate("/admin/details");
-    };
-
-    const goToCourses = () => {
-        if (role === "USER") navigate("/user/courses");
-        if (role === "INSTRUCTOR") navigate("/instructor/courses");
-        if (role === "ADMIN") navigate("/admin/courses");
-    };
-
-    const goToQuizzes = () => {
-        if (role === "USER") navigate("/user/quizzes");
-        if (role === "INSTRUCTOR") navigate("/instructor/quizzes");
-        if (role === "ADMIN") navigate("/admin/quizzes");
-    };
-
-    const goToNotifications = () => {
-        if (role === "USER") navigate("/user/notifications");
-    };
-
-    const goToChat = () => {
-        if (role === "USER") navigate("/user/chat");
-        if (role === "INSTRUCTOR") navigate("/instructor/chat");
-    };
-
-    const logout = () => {
-        localStorage.clear();
-        navigate("/login", { replace: true });
-    };
 
     const loadUnread = async () => {
         if (role !== "USER") return;

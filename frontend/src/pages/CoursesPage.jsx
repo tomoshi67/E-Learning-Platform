@@ -650,20 +650,19 @@ function CoursesPage() {
         await loadAdminQuizzes(selectedAdminCourseId);
     };
     const downloadResource = async (lecture) => {
-        const url = `${API_URL}/uploads/` + lecture.fileName;
-
-        const res = await fetch(url);
-        const blob = await res.blob();
+        const response = await fetch(lecture.filePath);
+        const blob = await response.blob();
 
         const blobUrl = window.URL.createObjectURL(blob);
 
         const a = document.createElement("a");
         a.href = blobUrl;
         a.download = lecture.fileName;
+
         document.body.appendChild(a);
         a.click();
-
         a.remove();
+
         window.URL.revokeObjectURL(blobUrl);
     };
     useEffect(() => {
@@ -1176,21 +1175,23 @@ function CoursesPage() {
 
                                                                 {lecture.type === "IMAGE" && (
                                                                     <img
-                                                                        src={`${API_URL}/uploads/` + lecture.fileName}
+                                                                        src={lecture.filePath}
                                                                         alt={lecture.title}
                                                                         className="mt-2 max-w-full rounded-2xl border"
                                                                     />
                                                                 )}
 
                                                                 {lecture.type === "VIDEO" && (
-                                                                    <video controls className="mt-2 w-full max-w-3xl rounded-2xl border bg-black">
-                                                                        <source src={`${API_URL}/uploads/` + lecture.fileName} />
-                                                                    </video>
+                                                                    <video
+                                                                        controls
+                                                                        className="mt-2 w-full max-w-3xl rounded-2xl border bg-black"
+                                                                        src={lecture.filePath}
+                                                                    />
                                                                 )}
 
                                                                 {lecture.type === "PDF" && (
                                                                     <iframe
-                                                                        src={`${API_URL}/uploads/` + lecture.fileName}
+                                                                        src={lecture.filePath}
                                                                         width="100%"
                                                                         height="500"
                                                                         className="mt-2 rounded-2xl border"
@@ -1199,7 +1200,7 @@ function CoursesPage() {
 
                                                                 {lecture.type === "NOTES" && (
                                                                     <iframe
-                                                                        src={`${API_URL}/uploads/` + lecture.fileName}
+                                                                        src={lecture.filePath}
                                                                         width="100%"
                                                                         height="400"
                                                                         className="mt-2 rounded-2xl border"

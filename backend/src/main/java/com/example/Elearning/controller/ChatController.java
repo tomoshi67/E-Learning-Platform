@@ -2,6 +2,9 @@ package com.example.Elearning.controller;
 
 import com.example.Elearning.model.*;
 import com.example.Elearning.repository.*;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -17,41 +20,30 @@ public class ChatController {
     private final EnrollmentRepository enrollmentRepository;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public ChatController(
             ChatMessageRepository chatMessageRepository,
             ChatSeenRepository chatSeenRepository,
             EnrollmentRepository enrollmentRepository,
             CourseRepository courseRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            SimpMessagingTemplate messagingTemplate
     ) {
         this.chatMessageRepository = chatMessageRepository;
         this.chatSeenRepository = chatSeenRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
+        this.messagingTemplate = messagingTemplate;
     }
+
+    // ---------- Existing REST endpoints (unchanged) ----------
 
     @PostMapping("/send")
     public ChatMessage sendMessage(@RequestBody ChatMessage messageData) {
-
-        ChatMessage message = new ChatMessage();
-
-        message.setCourseId(messageData.getCourseId());
-        message.setSenderEmail(messageData.getSenderEmail());
-        message.setSenderRole(messageData.getSenderRole());
-        message.setMessage(messageData.getMessage());
-        message.setCreatedAt(LocalDateTime.now());
-
-        User user = userRepository.findByEmail(messageData.getSenderEmail());
-
-        if (user != null) {
-            message.setSenderName(user.getUsername());
-        } else {
-            message.setSenderName(messageData.getSenderEmail());
-        }
-
-        return chatMessageRepository.save(message);
+        ChatMessage message = buildAndSaveMessage(messageData);
+        return message;
     }
 
     @GetMapping("/course/{courseId}")
@@ -136,5 +128,34 @@ public class ChatController {
         }
 
         return false;
+    }
+
+
+    @MessageMapping("/chat.send/{courseId}")
+    public void sendRealtimeMessage(@DestinationVariable Long courseId, ChatMessage messageData) {
+        messageData.setCourseId(courseId);
+        ChatMessage saved = buildAndSaveMessage(messageData);
+
+        messagingTemplate.convertAndSend("/topic/course/" + courseId, saved);
+    }
+
+    private ChatMessage buildAndSaveMessage(ChatMessage messageData) {
+        ChatMessage message = new ChatMessage();
+
+        message.setCourseId(messageData.getCourseId());
+        message.setSenderEmail(messageData.getSenderEmail());
+        message.setSenderRole(messageData.getSenderRole());
+        message.setMessage(messageData.getMessage());
+        message.setCreatedAt(LocalDateTime.now());
+
+        User user = userRepository.findByEmail(messageData.getSenderEmail());
+
+        if (user != null) {
+            message.setSenderName(user.getUsername());
+        } else {
+            message.setSenderName(messageData.getSenderEmail());
+        }
+
+        return chatMessageRepository.save(message);
     }
 }
