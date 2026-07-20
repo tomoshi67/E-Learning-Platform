@@ -54,8 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/register", "/auth/login", "/hello").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
 
-                        // WebSocket handshake: JWT is validated separately at the STOMP CONNECT
-                        // frame level (see StompAuthChannelInterceptor), not via this HTTP filter.
+
                         .requestMatchers("/ws-chat/**").permitAll()
 
                         .requestMatchers("/payments/**").hasRole("USER")
@@ -75,6 +74,9 @@ public class SecurityConfig {
                         .requestMatchers("/lectures/delete/**").hasRole("INSTRUCTOR")
                         .requestMatchers("/lectures/update-order/**").hasRole("INSTRUCTOR")
 
+                        .requestMatchers("/quizzes/generate-ai").hasRole("INSTRUCTOR")
+                        .requestMatchers("/quiz-questions/add-bulk").hasRole("INSTRUCTOR")
+
 
                         .requestMatchers("/admin/**").hasRole("ADMIN")
 
@@ -83,6 +85,9 @@ public class SecurityConfig {
                         .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
 
                         .requestMatchers("/lectures/course/**")
+                        .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
+
+                        .requestMatchers("/lectures/summarize/**")
                         .hasAnyRole("USER", "INSTRUCTOR", "ADMIN")
 
                         .requestMatchers("/reviews/course/**")

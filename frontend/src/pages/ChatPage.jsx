@@ -20,8 +20,7 @@ function ChatPage() {
     const [hasUnread, setHasUnread] = useState(false);
     const [connected, setConnected] = useState(false);
 
-    // refs so the STOMP callbacks always see the latest values without
-    // having to tear down/rebuild the connection on every render
+
     const stompClientRef = useRef(null);
     const subscriptionRef = useRef(null);
     const selectedCourseIdRef = useRef("");
@@ -115,12 +114,12 @@ function ChatPage() {
         setCourseUnread(unreadMap);
     };
 
-    // ---------- WebSocket: subscribe to a course's live topic ----------
+
     const subscribeToCourse = (courseId) => {
         const client = stompClientRef.current;
 
         if (!client || !client.connected) {
-            return; // will get subscribed once onConnect fires, via selectedCourseIdRef
+            return;
         }
 
         if (subscriptionRef.current) {
@@ -133,11 +132,9 @@ function ChatPage() {
             (frame) => {
                 const incoming = JSON.parse(frame.body);
 
-                // only append if this is still the open chat
                 if (String(courseId) === String(selectedCourseIdRef.current)) {
                     setMessages((prev) => [...prev, incoming]);
 
-                    // mark seen immediately since the user has this chat open
                     fetch(
                         `${API_URL}/chat/seen/` + courseId + "/" + encodeURIComponent(emailRef.current),
                         { method: "PUT", headers: authHeaders() }
@@ -208,12 +205,9 @@ function ChatPage() {
             }),
         });
 
-        // the message will come back through the /topic/course/{id} subscription
-        // (including the DB-generated id/timestamp), so we don't append it here
         setMessageText("");
     };
 
-    // ---------- WebSocket connection lifecycle ----------
     useEffect(() => {
         const client = new Client({
             webSocketFactory: () => new SockJS(`${API_URL}/ws-chat`),
@@ -224,7 +218,7 @@ function ChatPage() {
             onConnect: () => {
                 setConnected(true);
 
-                // if a course was already open when we (re)connected, resume its subscription
+
                 if (selectedCourseIdRef.current) {
                     subscribeToCourse(selectedCourseIdRef.current);
                 }
@@ -246,7 +240,7 @@ function ChatPage() {
             }
             client.deactivate();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, []);
 
     useEffect(() => {

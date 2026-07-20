@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API_URL from "../api";
 import DashboardLayout from "../components/DashboardLayout";
-import { BookOpen, ListChecks, Plus, Trash2, Play, RotateCcw, Eye, Send, CheckCircle2, HelpCircle, Pencil } from "lucide-react";
+import { BookOpen, ListChecks, Plus, Trash2, Play, RotateCcw, Eye, Send, CheckCircle2, HelpCircle, Pencil, Sparkles, Upload, Save } from "lucide-react";
 
 function QuizPage() {
     const navigate = useNavigate();
@@ -35,6 +35,12 @@ function QuizPage() {
         optionD: "",
         correctAnswer: "",
     });
+
+
+    const [aiFile, setAiFile] = useState(null);
+    const [aiGenerating, setAiGenerating] = useState(false);
+    const [aiGeneratedQuestions, setAiGeneratedQuestions] = useState([]);
+    const [aiSaving, setAiSaving] = useState(false);
 
     const authHeaders = () => ({
         Authorization: "Bearer " + localStorage.getItem("token"),
@@ -108,6 +114,8 @@ function QuizPage() {
         setScore(null);
         setReviewMode(false);
         setSelectedAnswers({});
+        setAiGeneratedQuestions([]);
+        setAiFile(null);
 
         if (!courseId) {
             setQuizzes([]);
@@ -169,6 +177,8 @@ function QuizPage() {
         setScore(null);
         setReviewMode(false);
         setSelectedAnswers({});
+        setAiGeneratedQuestions([]);
+        setAiFile(null);
 
         if (!quizId) {
             setQuestions([]);
@@ -238,6 +248,99 @@ function QuizPage() {
         });
 
         await loadQuestions(selectedQuizId);
+    };
+
+    const generateFromFile = async () => {
+        if (!selectedQuizId) {
+            alert("Select a quiz first");
+            return;
+        }
+
+        if (!aiFile) {
+            alert("Choose a photo or PDF first");
+            return;
+        }
+
+        setAiGenerating(true);
+
+        try {
+            const formData = new FormData();
+            formData.append("file", aiFile);
+
+            const res = await fetch(`${API_URL}/quizzes/generate-ai`, {
+                method: "POST",
+                headers: authHeaders(),
+                body: formData,
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                alert("AI generation failed: " + errText);
+                return;
+            }
+
+            const data = await res.json();
+
+            if (data.length === 0) {
+                alert("No questions could be extracted from this file. Try a clearer photo/PDF.");
+                return;
+            }
+
+            setAiGeneratedQuestions(data);
+        } catch (err) {
+            alert("AI generation failed: " + err.message);
+        } finally {
+            setAiGenerating(false);
+        }
+    };
+
+    const updateGeneratedQuestion = (index, field, value) => {
+        const updated = [...aiGeneratedQuestions];
+        updated[index] = { ...updated[index], [field]: value };
+        setAiGeneratedQuestions(updated);
+    };
+
+    const removeGeneratedQuestion = (index) => {
+        setAiGeneratedQuestions(aiGeneratedQuestions.filter((_, i) => i !== index));
+    };
+
+    const saveAllGeneratedQuestions = async () => {
+        if (!selectedQuizId) {
+            alert("Select a quiz first");
+            return;
+        }
+
+        if (aiGeneratedQuestions.length === 0) {
+            return;
+        }
+
+        setAiSaving(true);
+
+        try {
+            const payload = aiGeneratedQuestions.map((q) => ({
+                ...q,
+                quizId: selectedQuizId,
+            }));
+
+            const res = await fetch(`${API_URL}/quiz-questions/add-bulk`, {
+                method: "POST",
+                headers: authJsonHeaders(),
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                alert("Saving questions failed: " + errText);
+                return;
+            }
+
+            alert(aiGeneratedQuestions.length + " questions saved successfully");
+            setAiGeneratedQuestions([]);
+            setAiFile(null);
+            await loadQuestions(selectedQuizId);
+        } finally {
+            setAiSaving(false);
+        }
     };
 
     const startQuiz = async (quizId) => {
@@ -506,6 +609,89 @@ function QuizPage() {
                                 <div className="rounded-3xl bg-gray-50 p-10 text-center text-gray-500">Select a quiz to add or view questions.</div>
                             ) : (
                                 <>
+                                    {/* ---------- AI Quiz Generator ---------- */}
+                                    <div className="bg-gradient-to-br from-indigo-50 to-white rounded-3xl p-5 border border-indigo-100 mb-5">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Sparkles size={20} className="text-indigo-600" />
+                                            <h4 className="font-black">Generate Questions with AI</h4>
+                                        </div>
+
+                                        <p className="text-sm text-gray-500 mb-3">
+                                            Upload a photo or PDF of a question paper and AI will extract the questions for you to review.
+                                        </p>
+
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <input
+                                                type="file"
+                                                accept="image/*,.pdf"
+                                                onChange={(e) => setAiFile(e.target.files[0])}
+                                                className="flex-1 bg-white p-3 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm"
+                                            />
+
+                                            <button
+                                                onClick={generateFromFile}
+                                                disabled={aiGenerating}
+                                                className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-3 rounded-2xl font-black transition"
+                                            >
+                                                <Upload size={18} />
+                                                {aiGenerating ? "Generating..." : "Generate"}
+                                            </button>
+                                        </div>
+
+                                        {aiGeneratedQuestions.length > 0 && (
+                                            <div className="mt-5 space-y-4">
+                                                <p className="text-sm font-bold text-gray-600">
+                                                    Review and edit before saving ({aiGeneratedQuestions.length} question{aiGeneratedQuestions.length > 1 ? "s" : ""}):
+                                                </p>
+
+                                                {aiGeneratedQuestions.map((q, index) => (
+                                                    <div key={index} className="bg-white rounded-3xl p-4 border border-gray-100">
+                                                        <div className="flex justify-between items-start gap-3 mb-3">
+                                                            <input
+                                                                value={q.question}
+                                                                onChange={(e) => updateGeneratedQuestion(index, "question", e.target.value)}
+                                                                className="flex-1 bg-gray-50 p-3 rounded-2xl border border-gray-200 outline-none focus:border-black font-bold"
+                                                            />
+                                                            <button
+                                                                onClick={() => removeGeneratedQuestion(index)}
+                                                                className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-2 rounded-2xl transition"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                                                            <input value={q.optionA} onChange={(e) => updateGeneratedQuestion(index, "optionA", e.target.value)} className="bg-gray-50 p-2 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm" />
+                                                            <input value={q.optionB} onChange={(e) => updateGeneratedQuestion(index, "optionB", e.target.value)} className="bg-gray-50 p-2 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm" />
+                                                            <input value={q.optionC} onChange={(e) => updateGeneratedQuestion(index, "optionC", e.target.value)} className="bg-gray-50 p-2 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm" />
+                                                            <input value={q.optionD} onChange={(e) => updateGeneratedQuestion(index, "optionD", e.target.value)} className="bg-gray-50 p-2 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm" />
+                                                        </div>
+
+                                                        <select
+                                                            value={q.correctAnswer}
+                                                            onChange={(e) => updateGeneratedQuestion(index, "correctAnswer", e.target.value)}
+                                                            className="bg-gray-50 p-2 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm"
+                                                        >
+                                                            <option value="A">A</option>
+                                                            <option value="B">B</option>
+                                                            <option value="C">C</option>
+                                                            <option value="D">D</option>
+                                                        </select>
+                                                    </div>
+                                                ))}
+
+                                                <button
+                                                    onClick={saveAllGeneratedQuestions}
+                                                    disabled={aiSaving}
+                                                    className="w-full inline-flex justify-center items-center gap-2 bg-black hover:bg-gray-800 disabled:opacity-50 text-white py-3 rounded-2xl font-black transition"
+                                                >
+                                                    <Save size={18} />
+                                                    {aiSaving ? "Saving..." : `Save All ${aiGeneratedQuestions.length} Questions`}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-5 border border-gray-100 mb-5">
                                         <h4 className="font-black mb-3">Add Question</h4>
 

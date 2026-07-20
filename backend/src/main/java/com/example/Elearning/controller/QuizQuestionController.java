@@ -22,6 +22,11 @@ public class QuizQuestionController {
         return quizQuestionRepository.save(question);
     }
 
+    @PostMapping("/add-bulk")
+    public List<QuizQuestion> addQuestionsBulk(@RequestBody List<QuizQuestion> questions) {
+        return quizQuestionRepository.saveAll(questions);
+    }
+
     @GetMapping("/quiz/{quizId}")
     public List<QuizQuestion> getQuestionsByQuiz(@PathVariable Long quizId) {
         return quizQuestionRepository.findByQuizId(quizId);

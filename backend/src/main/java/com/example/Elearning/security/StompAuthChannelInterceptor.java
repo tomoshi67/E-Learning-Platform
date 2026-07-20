@@ -47,8 +47,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                                     userDetails.getAuthorities()
                             );
 
-                    // this becomes the Principal for the whole STOMP session,
-                    // used by convertAndSendToUser(...) if you add 1-to-1 messaging later
+
                     accessor.setUser(authToken);
                 } else {
                     throw new IllegalArgumentException("Invalid or expired token");

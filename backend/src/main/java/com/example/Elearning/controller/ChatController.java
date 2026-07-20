@@ -38,7 +38,6 @@ public class ChatController {
         this.messagingTemplate = messagingTemplate;
     }
 
-    // ---------- Existing REST endpoints (unchanged) ----------
 
     @PostMapping("/send")
     public ChatMessage sendMessage(@RequestBody ChatMessage messageData) {

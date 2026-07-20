@@ -10,7 +10,15 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.cloudinary.utils.ObjectUtils;
 import com.cloudinary.Cloudinary;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.client.RestTemplate;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
+import java.util.Base64;
 import java.util.Map;
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +34,15 @@ public class LectureController {
     private final LectureRepository lectureRepository;
     private final NotificationRepository notificationRepository;
     private final Cloudinary cloudinary;
+
+    @Value("${gemini.api.key}")
+    private String geminiApiKey;
+
+    @Value("${gemini.model}")
+    private String geminiModel;
+
+    private final RestTemplate restTemplate = new RestTemplate();
+    private final JsonMapper objectMapper = JsonMapper.builder().build();
 
     public LectureController(
             LectureRepository lectureRepository,
@@ -192,5 +209,90 @@ public class LectureController {
         lecture.setLectureOrder(lectureOrder);
 
         return lectureRepository.save(lecture);
+    }
+
+    @GetMapping("/summarize/{id}")
+    public Map<String, String> summarizeLecture(@PathVariable Long id) throws IOException {
+
+        Lecture lecture = lectureRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Lecture not found"));
+
+        String mimeType = detectSummarizableMimeType(lecture.getFileName());
+
+        if (mimeType == null) {
+            throw new RuntimeException(
+                    "AI summary isn't available for this file type yet. " +
+                            "It currently supports PDF and plain text (.txt) notes only - " +
+                            "Word/PowerPoint files aren't readable by the AI directly."
+            );
+        }
+
+        byte[] fileBytes = restTemplate.getForObject(lecture.getFilePath(), byte[].class);
+        String base64Data = Base64.getEncoder().encodeToString(fileBytes);
+
+        String prompt =
+                "Summarize the following study material into clear, concise revision notes. " +
+                        "Organize it under short headings for each major topic, with bullet points " +
+                        "underneath covering the key facts, definitions, and concepts a student would " +
+                        "need to remember for an exam. Keep it focused and skip any commentary about " +
+                        "the document itself - just the summary content.";
+
+        Map<String, Object> requestBody = Map.of(
+                "contents", List.of(
+                        Map.of("parts", List.of(
+                                Map.of("text", prompt),
+                                Map.of("inline_data", Map.of(
+                                        "mime_type", mimeType,
+                                        "data", base64Data
+                                ))
+                        ))
+                )
+        );
+
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/"
+                + geminiModel + ":generateContent?key=" + geminiApiKey;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+        String rawResponse;
+        try {
+            rawResponse = restTemplate.postForObject(url, request, String.class);
+        } catch (Exception e) {
+            throw new IOException("Gemini API call failed: " + e.getMessage(), e);
+        }
+
+        JsonNode root = objectMapper.readTree(rawResponse);
+        String summaryText = root
+                .path("candidates").get(0)
+                .path("content")
+                .path("parts").get(0)
+                .path("text")
+                .asText();
+
+        return Map.of(
+                "title", lecture.getTitle(),
+                "summary", summaryText
+        );
+    }
+
+    private String detectSummarizableMimeType(String fileName) {
+        if (fileName == null) {
+            return null;
+        }
+
+        String lower = fileName.toLowerCase();
+
+        if (lower.endsWith(".pdf")) {
+            return "application/pdf";
+        }
+
+        if (lower.endsWith(".txt")) {
+            return "text/plain";
+        }
+
+        return null;
     }
 }
