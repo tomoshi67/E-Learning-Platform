@@ -1,7 +1,21 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import API_URL from "../api";
 import DashboardLayout from "../components/DashboardLayout";
+import ReactMarkdown from "react-markdown";
+
+
+const aiMarkdownComponents = {
+    p: (props) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+    strong: (props) => <strong className="font-bold" {...props} />,
+    em: (props) => <em className="italic" {...props} />,
+    ul: (props) => <ul className="list-disc list-inside space-y-1 mb-2 ml-1" {...props} />,
+    ol: (props) => <ol className="list-decimal list-inside space-y-1 mb-2 ml-1" {...props} />,
+    li: (props) => <li className="leading-relaxed" {...props} />,
+    code: (props) => <code className="bg-gray-100 px-1.5 py-0.5 rounded-md text-xs font-mono" {...props} />,
+    h1: (props) => <h3 className="font-black text-base mt-3 mb-1" {...props} />,
+    h2: (props) => <h3 className="font-black text-base mt-3 mb-1" {...props} />,
+    h3: (props) => <h4 className="font-bold text-sm mt-2 mb-1" {...props} />,
+};
 import {
     BookOpen,
     Download,
@@ -13,10 +27,13 @@ import {
     Trash2,
     Upload,
     Users,
+    Sparkles,
+    Wand2,
+    MessageCircleQuestion,
+    Send,
 } from "lucide-react";
 
 function CoursesPage() {
-    const navigate = useNavigate();
     const dashboardRole = localStorage.getItem("role");
     const role = localStorage.getItem("role");
 
@@ -47,6 +64,15 @@ function CoursesPage() {
     const [adminLectures, setAdminLectures] = useState([]);
     const [adminQuizzes, setAdminQuizzes] = useState([]);
     const [previewLectureId, setPreviewLectureId] = useState(null);
+    const [lectureSummaries, setLectureSummaries] = useState({});
+    const [summarizing, setSummarizing] = useState({});
+    const [recommendations, setRecommendations] = useState([]);
+    const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+    const [doubtPanelCourseId, setDoubtPanelCourseId] = useState(null);
+    const [doubtMessages, setDoubtMessages] = useState({});
+    const [doubtInput, setDoubtInput] = useState({});
+    const [doubtLoading, setDoubtLoading] = useState({});
+    const doubtScrollRefs = useRef({});
 
     const authHeaders = () => ({
         Authorization: "Bearer " + localStorage.getItem("token"),
@@ -140,6 +166,106 @@ function CoursesPage() {
         }
 
         await loadLectures(courseId);
+    };
+
+
+    const toggleDoubtPanel = async (courseId) => {
+        if (doubtPanelCourseId === courseId) {
+            setDoubtPanelCourseId(null);
+            return;
+        }
+
+        setDoubtPanelCourseId(courseId);
+
+        if (!doubtMessages[courseId]) {
+            await loadDoubtHistory(courseId);
+        }
+    };
+
+    const loadDoubtHistory = async (courseId) => {
+        const email = localStorage.getItem("email");
+
+        const res = await fetch(
+            `${API_URL}/doubts/course/` + courseId + "/user/" + encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
+        );
+
+        const data = await res.json();
+
+        setDoubtMessages({
+            ...doubtMessages,
+            [courseId]: data,
+        });
+    };
+
+    const changeDoubtInput = (courseId, value) => {
+        setDoubtInput({
+            ...doubtInput,
+            [courseId]: value,
+        });
+    };
+
+    const askDoubt = async (courseId) => {
+        const question = doubtInput[courseId];
+
+        if (!question || !question.trim()) {
+            return;
+        }
+
+
+        setDoubtInput({
+            ...doubtInput,
+            [courseId]: "",
+        });
+
+        const tempId = "temp-" + Date.now();
+        const optimisticMessage = {
+            id: tempId,
+            sender: "STUDENT",
+            message: question,
+        };
+
+        setDoubtMessages({
+            ...doubtMessages,
+            [courseId]: [...(doubtMessages[courseId] || []), optimisticMessage],
+        });
+
+        setDoubtLoading({ ...doubtLoading, [courseId]: true });
+
+        try {
+            const res = await fetch(`${API_URL}/doubts/ask`, {
+                method: "POST",
+                headers: authJsonHeaders(),
+                body: JSON.stringify({
+                    courseId: courseId,
+                    userEmail: localStorage.getItem("email"),
+                    question: question,
+                }),
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                alert("Couldn't get an answer: " + errText);
+                return;
+            }
+
+            const newMessages = await res.json();
+
+
+            setDoubtMessages((prev) => ({
+                ...prev,
+                [courseId]: [
+                    ...(prev[courseId] || []).filter((m) => m.id !== tempId),
+                    ...newMessages,
+                ],
+            }));
+        } catch (err) {
+            alert("Couldn't get an answer: " + err.message);
+        } finally {
+            setDoubtLoading({ ...doubtLoading, [courseId]: false });
+        }
     };
 
     const changeCourse = (e) => {
@@ -472,11 +598,39 @@ function CoursesPage() {
         if (checkoutUrl === "ALREADY_PAID") {
             alert("You already paid for this course.");
             await loadUserEnrollments();
+            await loadRecommendations();
             return;
         }
 
         window.location.assign(checkoutUrl);
     };
+    const loadRecommendations = async () => {
+        const email = localStorage.getItem("email");
+
+        setLoadingRecommendations(true);
+
+        try {
+            const res = await fetch(
+                `${API_URL}/courses/recommendations/` + encodeURIComponent(email),
+                {
+                    headers: authHeaders(),
+                }
+            );
+
+            if (!res.ok) {
+                setRecommendations([]);
+                return;
+            }
+
+            const data = await res.json();
+            setRecommendations(data);
+        } catch {
+            setRecommendations([]);
+        } finally {
+            setLoadingRecommendations(false);
+        }
+    };
+
     const isEnrolled = (courseId) => {
         return enrollments.some((enrollment) => enrollment.courseId === courseId);
     };
@@ -665,6 +819,42 @@ function CoursesPage() {
 
         window.URL.revokeObjectURL(blobUrl);
     };
+
+
+    const summarizeLecture = async (lecture) => {
+        if (lectureSummaries[lecture.id]) {
+            setLectureSummaries({
+                ...lectureSummaries,
+                [lecture.id]: null,
+            });
+            return;
+        }
+
+        setSummarizing({ ...summarizing, [lecture.id]: true });
+
+        try {
+            const res = await fetch(`${API_URL}/lectures/summarize/` + lecture.id, {
+                headers: authHeaders(),
+            });
+
+            if (!res.ok) {
+                const errText = await res.text();
+                alert("Couldn't generate summary: " + errText);
+                return;
+            }
+
+            const data = await res.json();
+            setLectureSummaries({
+                ...lectureSummaries,
+                [lecture.id]: data.summary,
+            });
+        } catch (err) {
+            alert("Couldn't generate summary: " + err.message);
+        } finally {
+            setSummarizing({ ...summarizing, [lecture.id]: false });
+        }
+    };
+
     useEffect(() => {
         const loadData = async () => {
             if (dashboardRole === "INSTRUCTOR") {
@@ -675,6 +865,7 @@ function CoursesPage() {
                 await loadAllCourses();
                 await loadUserEnrollments();
                 await loadUserProgress();
+                await loadRecommendations();
             }
             if (dashboardRole === "ADMIN") {
                 await loadInstructors();
@@ -691,6 +882,15 @@ function CoursesPage() {
 
         initializeUnread();
     }, []);
+
+
+    useEffect(() => {
+        if (doubtPanelCourseId && doubtScrollRefs.current[doubtPanelCourseId]) {
+            const el = doubtScrollRefs.current[doubtPanelCourseId];
+            el.scrollTop = el.scrollHeight;
+        }
+    }, [doubtMessages, doubtPanelCourseId, doubtLoading]);
+
     return (
         <DashboardLayout activePage="Courses" hasUnread={hasUnread}>
             {dashboardRole === "INSTRUCTOR" ? (
@@ -975,6 +1175,37 @@ function CoursesPage() {
 
                     {userCoursePanel === "all" && (
                         <div>
+                            {(loadingRecommendations || recommendations.length > 0) && (
+                                <div className="mb-6 bg-gradient-to-br from-indigo-50 to-white rounded-3xl p-5 border border-indigo-100">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Wand2 size={20} className="text-indigo-600" />
+                                        <h4 className="font-black">Recommended for You</h4>
+                                    </div>
+
+                                    {loadingRecommendations ? (
+                                        <p className="text-sm text-gray-500">Finding courses that fit your interests...</p>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {recommendations.map((rec) => (
+                                                <div key={rec.course.id} className="bg-white rounded-2xl p-4 border border-indigo-100 shadow-sm">
+                                                    <p className="font-bold">{rec.course.title}</p>
+                                                    <p className="text-xs text-gray-500 mt-1 mb-2">{rec.course.category}</p>
+                                                    <p className="text-sm text-indigo-700 bg-indigo-50 rounded-xl p-2 mb-3">{rec.reason}</p>
+
+                                                    <button
+                                                        onClick={() => enrollCourse(rec.course)}
+                                                        className="w-full inline-flex justify-center items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-800 transition"
+                                                    >
+                                                        <Users size={15} />
+                                                        Enroll Now - ₹{rec.course.price || 0}
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                                 <input
                                     placeholder="Search courses"
@@ -1111,16 +1342,99 @@ function CoursesPage() {
                                                 </p>
                                             </div>
 
-                                            <button
-                                                onClick={() => {
-                                                    localStorage.setItem("lastVisitedCourse", course.title);
-                                                    toggleUserLectures(course.id);
-                                                }}
-                                                className="mt-4 bg-black text-white px-4 py-2 rounded-full flex items-center gap-2 hover:bg-gray-800 hover:shadow-lg transition"
-                                            >
-                                                <BookOpen size={17} />
-                                                {courseLectures[course.id] ? "Hide Lectures" : "Watch Lectures"}
-                                            </button>
+                                            <div className="mt-4 flex flex-wrap gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        localStorage.setItem("lastVisitedCourse", course.title);
+                                                        toggleUserLectures(course.id);
+                                                    }}
+                                                    className="bg-black text-white px-4 py-2 rounded-full flex items-center gap-2 hover:bg-gray-800 hover:shadow-lg transition"
+                                                >
+                                                    <BookOpen size={17} />
+                                                    {courseLectures[course.id] ? "Hide Lectures" : "Watch Lectures"}
+                                                </button>
+
+                                                <button
+                                                    onClick={() => toggleDoubtPanel(course.id)}
+                                                    className={
+                                                        doubtPanelCourseId === course.id
+                                                            ? "bg-indigo-600 text-white px-4 py-2 rounded-full flex items-center gap-2 hover:bg-indigo-700 transition"
+                                                            : "bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full flex items-center gap-2 hover:bg-indigo-600 hover:text-white transition"
+                                                    }
+                                                >
+                                                    <MessageCircleQuestion size={17} />
+                                                    {doubtPanelCourseId === course.id ? "Close Doubt Chat" : "Ask a Doubt"}
+                                                </button>
+                                            </div>
+
+                                            {doubtPanelCourseId === course.id && (
+                                                <div className="mt-4 bg-[#f7f7f7] rounded-3xl p-4">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <MessageCircleQuestion size={18} className="text-indigo-600" />
+                                                        <p className="font-bold text-sm">Ask a question about {course.title}</p>
+                                                    </div>
+
+                                                    <div
+                                                        ref={(el) => (doubtScrollRefs.current[course.id] = el)}
+                                                        className="space-y-3 max-h-80 overflow-y-auto pr-1 mb-3"
+                                                    >
+                                                        {(!doubtMessages[course.id] || doubtMessages[course.id].length === 0) ? (
+                                                            <p className="text-sm text-gray-500 text-center py-4">No questions asked yet. Ask anything about this course!</p>
+                                                        ) : (
+                                                            doubtMessages[course.id].map((msg) => (
+                                                                <div
+                                                                    key={msg.id}
+                                                                    className={
+                                                                        msg.sender === "STUDENT"
+                                                                            ? "bg-black text-white rounded-2xl p-3 ml-auto max-w-[85%] text-sm"
+                                                                            : "bg-white rounded-2xl p-3 max-w-[85%] text-sm border border-indigo-100 shadow-sm"
+                                                                    }
+                                                                >
+                                                                    {msg.sender !== "STUDENT" && (
+                                                                        <p className="text-xs font-bold text-indigo-600 mb-1">AI Tutor</p>
+                                                                    )}
+                                                                    {msg.sender === "STUDENT" ? (
+                                                                        <p className="whitespace-pre-wrap">{msg.message}</p>
+                                                                    ) : (
+                                                                        <ReactMarkdown components={aiMarkdownComponents}>
+                                                                            {msg.message}
+                                                                        </ReactMarkdown>
+                                                                    )}
+                                                                </div>
+                                                            ))
+                                                        )}
+
+                                                        {doubtLoading[course.id] && (
+                                                            <div className="bg-white rounded-2xl p-3 max-w-[85%] text-sm border border-indigo-100 shadow-sm">
+                                                                <p className="text-xs font-bold text-indigo-600 mb-1">AI Tutor</p>
+                                                                <p className="text-gray-400">Thinking...</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            value={doubtInput[course.id] || ""}
+                                                            onChange={(e) => changeDoubtInput(course.id, e.target.value)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") {
+                                                                    askDoubt(course.id);
+                                                                }
+                                                            }}
+                                                            placeholder="Type your question..."
+                                                            className="flex-1 bg-white border border-gray-200 px-4 py-2 rounded-2xl outline-none focus:border-black text-sm"
+                                                        />
+
+                                                        <button
+                                                            onClick={() => askDoubt(course.id)}
+                                                            disabled={doubtLoading[course.id]}
+                                                            className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-2xl text-sm font-bold hover:bg-indigo-700 transition disabled:opacity-50"
+                                                        >
+                                                            <Send size={15} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             <div className="mt-4 space-y-3">
                                                 {courseLectures[course.id]?.map((lecture) => (
@@ -1155,7 +1469,40 @@ function CoursesPage() {
                                                                 <Download size={16} />
                                                                 Download
                                                             </button>
+
+                                                            {(lecture.type === "PDF" || lecture.type === "NOTES") && (
+                                                                <button
+                                                                    onClick={() => summarizeLecture(lecture)}
+                                                                    disabled={summarizing[lecture.id]}
+                                                                    className={
+                                                                        lectureSummaries[lecture.id]
+                                                                            ? "inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-2xl text-sm font-semibold shadow-sm hover:bg-indigo-700 transition disabled:opacity-50"
+                                                                            : "inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white transition px-4 py-2 rounded-2xl text-sm font-semibold shadow-sm disabled:opacity-50"
+                                                                    }
+                                                                >
+                                                                    <Sparkles size={16} />
+                                                                    {summarizing[lecture.id]
+                                                                        ? "Summarizing..."
+                                                                        : lectureSummaries[lecture.id]
+                                                                            ? "Hide Summary"
+                                                                            : "AI Summary"}
+                                                                </button>
+                                                            )}
                                                         </div>
+
+                                                        {lectureSummaries[lecture.id] && (
+                                                            <div className="mb-3 bg-white rounded-3xl border border-indigo-100 p-4 shadow-inner">
+                                                                <div className="flex items-center gap-2 mb-2">
+                                                                    <Sparkles size={16} className="text-indigo-600" />
+                                                                    <p className="font-bold text-sm text-indigo-700">AI Revision Summary</p>
+                                                                </div>
+                                                                <div className="text-sm text-gray-700">
+                                                                    <ReactMarkdown components={aiMarkdownComponents}>
+                                                                        {lectureSummaries[lecture.id]}
+                                                                    </ReactMarkdown>
+                                                                </div>
+                                                            </div>
+                                                        )}
 
                                                         {previewLectureId === lecture.id && (
                                                             <div className="mt-4 bg-white rounded-3xl border border-gray-200 p-4 relative shadow-inner">

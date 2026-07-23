@@ -24,6 +24,8 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.net.URL;
+import java.io.InputStream;
 
 @RestController
 @RequestMapping("/lectures")
@@ -227,55 +229,73 @@ public class LectureController {
             );
         }
 
-        byte[] fileBytes = restTemplate.getForObject(lecture.getFilePath(), byte[].class);
-        String base64Data = Base64.getEncoder().encodeToString(fileBytes);
+        System.out.println("FILE PATH = " + lecture.getFilePath());
 
-        String prompt =
-                "Summarize the following study material into clear, concise revision notes. " +
-                        "Organize it under short headings for each major topic, with bullet points " +
-                        "underneath covering the key facts, definitions, and concepts a student would " +
-                        "need to remember for an exam. Keep it focused and skip any commentary about " +
-                        "the document itself - just the summary content.";
+        URL fileUrl = new URL(lecture.getFilePath());
 
-        Map<String, Object> requestBody = Map.of(
-                "contents", List.of(
-                        Map.of("parts", List.of(
-                                Map.of("text", prompt),
-                                Map.of("inline_data", Map.of(
-                                        "mime_type", mimeType,
-                                        "data", base64Data
-                                ))
-                        ))
-                )
-        );
+        try (InputStream inputStream = fileUrl.openStream()) {
 
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                + geminiModel + ":generateContent?key=" + geminiApiKey;
+            byte[] fileBytes = inputStream.readAllBytes();
+            String base64Data = Base64.getEncoder().encodeToString(fileBytes);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+            String prompt =
+                    "Summarize the following study material into clear, concise revision notes. " +
+                            "Organize it under short headings for each major topic, with bullet points " +
+                            "underneath covering the key facts, definitions, and concepts a student would " +
+                            "need to remember for an exam. Keep it focused and skip any commentary about " +
+                            "the document itself - just the summary content.";
 
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+            Map<String, Object> requestBody = Map.of(
+                    "contents", List.of(
+                            Map.of("parts", List.of(
+                                    Map.of("text", prompt),
+                                    Map.of("inline_data", Map.of(
+                                            "mime_type", mimeType,
+                                            "data", base64Data
+                                    ))
+                            ))
+                    )
+            );
 
-        String rawResponse;
-        try {
-            rawResponse = restTemplate.postForObject(url, request, String.class);
-        } catch (Exception e) {
-            throw new IOException("Gemini API call failed: " + e.getMessage(), e);
+            String geminiUrl =
+                    "https://generativelanguage.googleapis.com/v1beta/models/"
+                            + geminiModel
+                            + ":generateContent?key="
+                            + geminiApiKey;
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> request =
+                    new HttpEntity<>(requestBody, headers);
+
+            String rawResponse;
+
+            try {
+                rawResponse = restTemplate.postForObject(
+                        geminiUrl,
+                        request,
+                        String.class
+                );
+            } catch (Exception e) {
+                throw new IOException("Gemini API call failed: " + e.getMessage(), e);
+            }
+
+            JsonNode root = objectMapper.readTree(rawResponse);
+
+            String summaryText = root
+                    .path("candidates").get(0)
+                    .path("content")
+                    .path("parts").get(0)
+                    .path("text")
+                    .asText();
+
+            return Map.of(
+                    "title", lecture.getTitle(),
+                    "summary", summaryText
+            );
         }
 
-        JsonNode root = objectMapper.readTree(rawResponse);
-        String summaryText = root
-                .path("candidates").get(0)
-                .path("content")
-                .path("parts").get(0)
-                .path("text")
-                .asText();
-
-        return Map.of(
-                "title", lecture.getTitle(),
-                "summary", summaryText
-        );
     }
 
     private String detectSummarizableMimeType(String fileName) {

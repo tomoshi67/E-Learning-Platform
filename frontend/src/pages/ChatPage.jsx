@@ -25,6 +25,7 @@ function ChatPage() {
     const subscriptionRef = useRef(null);
     const selectedCourseIdRef = useRef("");
     const emailRef = useRef(email);
+    const messagesContainerRef = useRef(null);
 
     useEffect(() => {
         selectedCourseIdRef.current = selectedCourseId;
@@ -132,8 +133,10 @@ function ChatPage() {
             (frame) => {
                 const incoming = JSON.parse(frame.body);
 
+
                 if (String(courseId) === String(selectedCourseIdRef.current)) {
                     setMessages((prev) => [...prev, incoming]);
+
 
                     fetch(
                         `${API_URL}/chat/seen/` + courseId + "/" + encodeURIComponent(emailRef.current),
@@ -205,8 +208,10 @@ function ChatPage() {
             }),
         });
 
+
         setMessageText("");
     };
+
 
     useEffect(() => {
         const client = new Client({
@@ -252,6 +257,13 @@ function ChatPage() {
         initialize();
 
     }, []);
+
+
+    useEffect(() => {
+        if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+    }, [messages]);
 
     return (
         <DashboardLayout activePage="Chat" hasChatUnread={hasUnread}>
@@ -326,7 +338,7 @@ function ChatPage() {
                                 </span>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto space-y-3 pr-2 bg-gray-50 rounded-3xl p-4">
+                            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto space-y-3 pr-2 bg-gray-50 rounded-3xl p-4">
                                 {messages.length === 0 ? (
                                     <p className="text-gray-500 text-center mt-8">No messages yet.</p>
                                 ) : (
