@@ -65,7 +65,7 @@ public class DoubtController {
         String userEmail = String.valueOf(body.get("userEmail"));
         String question = String.valueOf(body.get("question"));
 
-        // 1. save the student's question first
+
         DoubtMessage studentMessage = new DoubtMessage();
         studentMessage.setCourseId(courseId);
         studentMessage.setUserEmail(userEmail);
@@ -74,7 +74,7 @@ public class DoubtController {
         studentMessage.setCreatedAt(LocalDateTime.now());
         doubtMessageRepository.save(studentMessage);
 
-        // 2. build course context for grounding
+
         Course course = courseRepository.findById(courseId).orElse(null);
         List<Lecture> lectures = lectureRepository.findByCourseIdOrderByLectureOrderAsc(courseId);
 
@@ -96,9 +96,6 @@ public class DoubtController {
                         "redirect the student back to course-related questions rather than answering it fully. " +
                         "Keep answers concise and student-friendly.";
 
-        // 2b. download the actual readable lecture files (PDF/txt only) so the AI can
-        // reference real content, not just titles. Re-attached on every question since
-        // each API call is stateless - the model has no memory of files from earlier calls.
         List<Map<String, Object>> materialParts = new ArrayList<>();
         materialParts.add(Map.of("text", "Course material attached below:"));
 
@@ -120,12 +117,12 @@ public class DoubtController {
                         )
                 ));
             } catch (Exception e) {
-                // if one file fails to download, skip it rather than failing the whole request
+
                 System.out.println("Skipping lecture file (couldn't download): " + lecture.getFileName());
             }
         }
 
-        // 3. build full conversation history (including the question just saved) for multi-turn context
+
         List<DoubtMessage> history = doubtMessageRepository
                 .findByCourseIdAndUserEmailOrderByCreatedAtAsc(courseId, userEmail);
 
@@ -138,8 +135,7 @@ public class DoubtController {
 
         List<Map<String, Object>> contents = new ArrayList<>();
 
-        // only attach material if we actually found readable files - otherwise skip
-        // this block entirely and just use the plain conversation history
+
         if (materialParts.size() > 1) {
             contents.add(Map.of("role", "user", "parts", materialParts));
             contents.add(Map.of("role", "model", "parts", List.of(
@@ -179,7 +175,6 @@ public class DoubtController {
                 .path("text")
                 .asText();
 
-        // 4. save the AI's answer
         DoubtMessage aiMessage = new DoubtMessage();
         aiMessage.setCourseId(courseId);
         aiMessage.setUserEmail(userEmail);

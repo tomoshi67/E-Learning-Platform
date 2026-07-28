@@ -34,3 +34,7 @@ build/
 
 # Ignore application properties (contains secrets)
 backend/src/main/resources/application.properties
+.env
+.env.*
+backend/.env
+frontend/.env

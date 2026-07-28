@@ -13,7 +13,6 @@ public class DoubtMessage {
     private Long courseId;
     private String userEmail;
 
-    // "STUDENT" or "AI"
     private String sender;
 
     @Column(length = 4000)

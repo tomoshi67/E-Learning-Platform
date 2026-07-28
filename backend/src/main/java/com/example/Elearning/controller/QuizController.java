@@ -17,6 +17,10 @@ import com.example.Elearning.repository.NotificationRepository;
 import java.time.LocalDateTime;
 import com.example.Elearning.model.Enrollment;
 import com.example.Elearning.repository.EnrollmentRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -76,6 +80,7 @@ public class QuizController {
 
     @GetMapping("/course/{courseId}")
     public List<Quiz> getQuizzesByCourse(@PathVariable Long courseId) {
+        verifyStudentEnrollment(courseId);
         return quizRepository.findByCourseId(courseId);
     }
 
@@ -85,6 +90,11 @@ public class QuizController {
         return "Quiz deleted successfully";
     }
 
+    // ---------- New: AI quiz generation from uploaded image/PDF ----------
+    // Returns extracted questions WITHOUT saving them (quizId is left null).
+    // Instructor reviews them in the UI, then:
+    //   1. calls /quizzes/add to create the Quiz and get its id
+    //   2. sets that id on each question and calls /quiz-questions/add-bulk
     @PostMapping("/generate-ai")
     public List<QuizQuestion> generateQuizFromFile(
             @RequestParam("file") MultipartFile file
@@ -178,5 +188,28 @@ public class QuizController {
         }
 
         return questions;
+    }
+
+    // Students (ROLE_USER) can only view quizzes for a course they're actually
+    // enrolled in. Instructors/admins are unrestricted here.
+    private void verifyStudentEnrollment(Long courseId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        boolean isStudent = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_USER"));
+
+        if (!isStudent) {
+            return;
+        }
+
+        String email = auth.getName();
+        boolean enrolled = enrollmentRepository.existsByUserEmailAndCourseId(email, courseId);
+
+        if (!enrolled) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not enrolled in this course"
+            );
+        }
     }
 }
