@@ -7,7 +7,7 @@ function PaymentSuccessPage() {
     const [message, setMessage] = useState("Confirming payment...");
 
     const authHeaders = () => ({
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + sessionStorage.getItem("token"),
     });
 
     useEffect(() => {

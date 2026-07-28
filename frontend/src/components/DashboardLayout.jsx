@@ -18,9 +18,9 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
     const navigate = useNavigate();
     const [collapsed, setCollapsed] = useState(false);
 
-    const role = localStorage.getItem("role") || "USER";
-    const email = localStorage.getItem("email") || "user@email.com";
-    const username = localStorage.getItem("username") || email.split("@")[0];
+    const role = sessionStorage.getItem("role") || "USER";
+    const email = sessionStorage.getItem("email") || "user@email.com";
+    const username = sessionStorage.getItem("username") || email.split("@")[0];
 
     const basePath = role.toLowerCase();
 
@@ -29,7 +29,7 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
     };
 
     const logout = () => {
-        localStorage.clear();
+        sessionStorage.clear();
         navigate("/login", { replace: true });
     };
 
@@ -43,10 +43,10 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#eef3f8] via-white to-[#f7f1ff] p-4">
-            <div className="min-h-[calc(100vh-2rem)] overflow-hidden rounded-[2rem] border border-white/70 bg-white/80 shadow-2xl backdrop-blur flex">
+        <div className="min-h-screen bg-[#0B0E14] p-4">
+            <div className="min-h-[calc(100vh-2rem)] overflow-hidden rounded-[2rem] border border-[#232838] bg-[#0F131C] shadow-2xl flex">
                 <aside
-                    className={`${collapsed ? "w-[76px]" : "w-72"} shrink-0 hidden md:flex transition-all duration-300 bg-white/90 border-r border-gray-100 flex-col justify-between`}
+                    className={`${collapsed ? "w-[76px]" : "w-72"} shrink-0 hidden md:flex transition-all duration-300 bg-[#0F131C] border-r border-[#1C2130] flex-col justify-between`}
                 >
                     <div>
                         <div className="p-5 flex items-center justify-between gap-3">
@@ -54,12 +54,12 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
                                 onClick={() => goTo("courses")}
                                 className={`${collapsed ? "justify-center" : "justify-start"} flex items-center gap-3 min-w-0`}
                             >
-                                <div className="shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-black to-gray-700 text-white flex items-center justify-center shadow-lg">
+                                <div className="shrink-0 w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30">
                                     <LayoutDashboard size={22} />
                                 </div>
                                 {!collapsed && (
                                     <div className="text-left">
-                                        <h1 className="text-xl font-black leading-tight">E-Learn</h1>
+                                        <h1 className="text-xl font-black leading-tight text-gray-100">E-Learn</h1>
                                         <p className="text-xs text-gray-500">Learning dashboard</p>
                                     </div>
                                 )}
@@ -68,7 +68,7 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
                             {!collapsed && (
                                 <button
                                     onClick={() => setCollapsed(true)}
-                                    className="shrink-0 w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 transition flex items-center justify-center"
+                                    className="shrink-0 w-9 h-9 rounded-xl bg-[#1A1F2B] hover:bg-[#232838] transition flex items-center justify-center text-gray-300"
                                     title="Collapse sidebar"
                                 >
                                     <ChevronLeft size={18} />
@@ -80,7 +80,7 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
                             <div className="px-4 mb-3">
                                 <button
                                     onClick={() => setCollapsed(false)}
-                                    className="w-full h-11 rounded-2xl bg-gray-100 hover:bg-gray-200 transition flex items-center justify-center"
+                                    className="w-full h-11 rounded-2xl bg-[#1A1F2B] hover:bg-[#232838] transition flex items-center justify-center text-gray-300"
                                     title="Open sidebar"
                                 >
                                     <Menu size={19} />
@@ -101,8 +101,8 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
                                             onClick={() => goTo(item.page)}
                                             className={
                                                 isActive
-                                                    ? `${collapsed ? "justify-center px-0" : "justify-start px-4"} w-full min-h-[48px] flex items-center gap-3 py-3 rounded-2xl text-left bg-black text-white shadow-lg transition`
-                                                    : `${collapsed ? "justify-center px-0" : "justify-start px-4 hover:translate-x-1"} w-full min-h-[48px] flex items-center gap-3 py-3 rounded-2xl text-left text-gray-700 hover:bg-gray-100 hover:text-black transition`
+                                                    ? `${collapsed ? "justify-center px-0" : "justify-start px-4"} w-full min-h-[48px] flex items-center gap-3 py-3 rounded-2xl text-left bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25 transition`
+                                                    : `${collapsed ? "justify-center px-0" : "justify-start px-4 hover:translate-x-1"} w-full min-h-[48px] flex items-center gap-3 py-3 rounded-2xl text-left text-gray-400 hover:bg-[#1A1F2B] hover:text-gray-100 transition`
                                             }
                                             title={item.label}
                                         >
@@ -115,9 +115,9 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
                     </div>
 
                     <div className={`${collapsed ? "p-3" : "p-4"}`}>
-                        <div className={`${collapsed ? "hidden" : "block"} mb-3 rounded-3xl bg-gradient-to-br from-gray-50 to-blue-50 p-4 border border-gray-100`}>
-                            <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
-                                <Shield size={16} />
+                        <div className={`${collapsed ? "hidden" : "block"} mb-3 rounded-3xl bg-[#141822] p-4 border border-[#232838]`}>
+                            <div className="flex items-center gap-2 text-sm font-bold text-gray-200">
+                                <Shield size={16} className="text-indigo-400" />
                                 {role}
                             </div>
                             <p className="text-xs text-gray-500 mt-1 truncate">{email}</p>
@@ -125,7 +125,7 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
 
                         <button
                             onClick={logout}
-                            className="w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-red-500 px-4 py-3 font-bold text-white hover:bg-red-600 hover:shadow-lg transition"
+                            className="w-full min-h-[48px] flex items-center justify-center gap-2 rounded-2xl bg-red-500/10 border border-red-500/30 px-4 py-3 font-bold text-red-400 hover:bg-red-500 hover:text-white hover:shadow-lg hover:shadow-red-500/25 transition"
                             title="Logout"
                         >
                             <LogOut size={18} className="shrink-0" />
@@ -134,19 +134,19 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
                     </div>
                 </aside>
 
-                <main className="flex-1 min-w-0 bg-[#f6f8fb]">
-                    <header className="sticky top-0 z-20 h-20 bg-white/90 backdrop-blur border-b border-gray-100 px-5 md:px-8 flex items-center justify-between">
+                <main className="flex-1 min-w-0 bg-[#0B0E14]">
+                    <header className="sticky top-0 z-20 h-20 bg-[#0F131C]/95 backdrop-blur border-b border-[#1C2130] px-5 md:px-8 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={() => setCollapsed(!collapsed)}
-                                className="hidden md:flex w-10 h-10 rounded-2xl bg-gray-100 hover:bg-gray-200 transition items-center justify-center"
+                                className="hidden md:flex w-10 h-10 rounded-2xl bg-[#1A1F2B] hover:bg-[#232838] transition items-center justify-center text-gray-300"
                             >
                                 <Menu size={20} />
                             </button>
 
                             <div>
-                                <p className="text-xs font-black tracking-[0.25em] text-gray-400">DASHBOARD</p>
-                                <h2 className="text-xl md:text-2xl font-black text-gray-900">{activePage}</h2>
+                                <p className="text-xs font-black tracking-[0.25em] text-gray-500">DASHBOARD</p>
+                                <h2 className="text-xl md:text-2xl font-black text-gray-100">{activePage}</h2>
                             </div>
                         </div>
 
@@ -154,26 +154,26 @@ function DashboardLayout({ activePage, children, hasUnread = false }) {
                             {role !== "ADMIN" && (
                                 <button
                                     onClick={() => goTo("notifications")}
-                                    className="relative w-11 h-11 rounded-2xl bg-white border border-gray-100 shadow-sm hover:bg-gray-100 hover:scale-105 transition flex items-center justify-center"
+                                    className="relative w-11 h-11 rounded-2xl bg-[#141822] border border-[#232838] hover:bg-[#1A1F2B] hover:scale-105 transition flex items-center justify-center text-gray-300"
                                     title="Notifications"
                                 >
                                     <Bell size={20} />
                                     {hasUnread && activePage !== "Notifications" && (
-                                        <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white"></span>
+                                        <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-[#0F131C] shadow-[0_0_6px_rgba(239,68,68,0.8)]"></span>
                                     )}
                                 </button>
                             )}
 
                             <button
                                 onClick={() => goTo("profile")}
-                                className="flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-3 py-2 hover:bg-gray-100 hover:scale-[1.02] transition"
+                                className="flex items-center gap-3 rounded-2xl bg-[#141822] border border-[#232838] px-3 py-2 hover:bg-[#1A1F2B] hover:scale-[1.02] transition"
                                 title="Open profile"
                             >
                                 <div className="hidden sm:block text-right max-w-[180px]">
-                                    <p className="text-sm font-bold truncate">{username}</p>
+                                    <p className="text-sm font-bold truncate text-gray-100">{username}</p>
                                     <p className="text-xs text-gray-500 truncate">{email}</p>
                                 </div>
-                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-black to-gray-700 text-white flex items-center justify-center font-black shadow-md">
+                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center font-black shadow-md shadow-indigo-500/30">
                                     {email.charAt(0).toUpperCase()}
                                 </div>
                             </button>

@@ -8,9 +8,9 @@ import { MessageCircle, Send, BookOpen, Users, Circle } from "lucide-react";
 
 function ChatPage() {
 
-    const role = localStorage.getItem("role");
-    const email = localStorage.getItem("email");
-    const token = localStorage.getItem("token");
+    const role = sessionStorage.getItem("role");
+    const email = sessionStorage.getItem("email");
+    const token = sessionStorage.getItem("token");
 
     const [courses, setCourses] = useState([]);
     const [selectedCourseId, setSelectedCourseId] = useState("");
@@ -32,12 +32,12 @@ function ChatPage() {
     }, [selectedCourseId]);
 
     const authHeaders = () => ({
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + sessionStorage.getItem("token"),
     });
 
     const authJsonHeaders = () => ({
         "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + sessionStorage.getItem("token"),
     });
 
 
@@ -257,8 +257,7 @@ function ChatPage() {
         initialize();
 
     }, []);
-
-
+    
     useEffect(() => {
         if (messagesContainerRef.current) {
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
@@ -268,19 +267,19 @@ function ChatPage() {
     return (
         <DashboardLayout activePage="Chat" hasChatUnread={hasUnread}>
             <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="rounded-[2rem] bg-white border border-gray-100 shadow-sm p-6">
+                <div className="rounded-[2rem] bg-[#0F131C] border border-[#232838] shadow-sm p-6">
                     <div className="flex items-center gap-3 mb-5">
-                        <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30">
                             <BookOpen size={22} />
                         </div>
                         <div>
-                            <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Channels</p>
-                            <h3 className="text-xl font-black">Courses</h3>
+                            <p className="text-xs font-bold tracking-[0.25em] text-gray-500 uppercase">Channels</p>
+                            <h3 className="text-xl font-black text-gray-100">Courses</h3>
                         </div>
                     </div>
 
                     {courses.length === 0 ? (
-                        <div className="rounded-3xl bg-gray-50 p-8 text-center text-gray-500">
+                        <div className="rounded-3xl bg-[#141822] border border-[#232838] p-8 text-center text-gray-500">
                             {role === "USER" ? "Enroll in a course to chat." : "Create a course to chat."}
                         </div>
                     ) : (
@@ -291,12 +290,12 @@ function ChatPage() {
                                     onClick={() => loadMessages(course.id)}
                                     className={
                                         selectedCourseId === course.id
-                                            ? "w-full text-left bg-black text-white rounded-3xl p-4 flex justify-between items-center shadow-lg transition"
-                                            : "w-full text-left bg-gray-50 hover:bg-gray-100 rounded-3xl p-4 flex justify-between items-center transition"
+                                            ? "w-full text-left bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-3xl p-4 flex justify-between items-center shadow-lg shadow-indigo-500/25 transition"
+                                            : "w-full text-left bg-[#141822] hover:bg-[#1A1F2B] border border-[#232838] rounded-3xl p-4 flex justify-between items-center transition"
                                     }
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className={selectedCourseId === course.id ? "w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center" : "w-10 h-10 rounded-2xl bg-white border flex items-center justify-center"}>
+                                        <div className={selectedCourseId === course.id ? "w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center" : "w-10 h-10 rounded-2xl bg-[#1A1F2B] border border-[#232838] flex items-center justify-center text-gray-400"}>
                                             <MessageCircle size={18} />
                                         </div>
                                         <div>
@@ -305,40 +304,40 @@ function ChatPage() {
                                         </div>
                                     </div>
 
-                                    {courseUnread[course.id] && <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>}
+                                    {courseUnread[course.id] && <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.8)]"></span>}
                                 </button>
                             ))}
                         </div>
                     )}
                 </div>
 
-                <div className="xl:col-span-2 rounded-[2rem] bg-white border border-gray-100 shadow-sm p-6 flex flex-col h-[78vh]">
+                <div className="xl:col-span-2 rounded-[2rem] bg-[#0F131C] border border-[#232838] shadow-sm p-6 flex flex-col h-[78vh]">
                     {!selectedCourseId ? (
-                        <div className="flex-1 rounded-3xl bg-gray-50 flex flex-col items-center justify-center text-center p-8">
-                            <div className="w-16 h-16 rounded-3xl bg-black text-white flex items-center justify-center mb-4">
+                        <div className="flex-1 rounded-3xl bg-[#141822] border border-[#232838] flex flex-col items-center justify-center text-center p-8">
+                            <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
                                 <MessageCircle size={28} />
                             </div>
-                            <h3 className="text-2xl font-black">Open a course chat</h3>
+                            <h3 className="text-2xl font-black text-gray-100">Open a course chat</h3>
                             <p className="text-gray-500 mt-2">Select a course from the left to start messaging.</p>
                         </div>
                     ) : (
                         <>
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+                            <div className="flex items-center justify-between border-b border-[#232838] pb-4 mb-4">
                                 <div>
-                                    <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Live Discussion</p>
-                                    <h3 className="text-xl font-black">Course Chat</h3>
+                                    <p className="text-xs font-bold tracking-[0.25em] text-gray-500 uppercase">Live Discussion</p>
+                                    <h3 className="text-xl font-black text-gray-100">Course Chat</h3>
                                 </div>
                                 <span className={
                                     connected
-                                        ? "inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-2xl text-sm font-bold"
-                                        : "inline-flex items-center gap-2 bg-yellow-50 text-yellow-700 px-4 py-2 rounded-2xl text-sm font-bold"
+                                        ? "inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-2 rounded-2xl text-sm font-bold"
+                                        : "inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 px-4 py-2 rounded-2xl text-sm font-bold"
                                 }>
                                     <Circle size={10} fill="currentColor" />
                                     {connected ? "Active" : "Connecting..."}
                                 </span>
                             </div>
 
-                            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto space-y-3 pr-2 bg-gray-50 rounded-3xl p-4">
+                            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto space-y-3 pr-2 bg-[#141822] border border-[#232838] rounded-3xl p-4">
                                 {messages.length === 0 ? (
                                     <p className="text-gray-500 text-center mt-8">No messages yet.</p>
                                 ) : (
@@ -347,8 +346,8 @@ function ChatPage() {
                                             key={msg.id}
                                             className={
                                                 msg.senderEmail === email
-                                                    ? "bg-black text-white rounded-3xl p-4 ml-auto max-w-[78%] shadow-md"
-                                                    : "bg-white rounded-3xl p-4 max-w-[78%] shadow-sm border border-gray-100"
+                                                    ? "bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-3xl p-4 ml-auto max-w-[78%] shadow-md shadow-indigo-500/25"
+                                                    : "bg-[#1A1F2B] text-gray-100 rounded-3xl p-4 max-w-[78%] shadow-sm border border-[#232838]"
                                             }
                                         >
                                             <p className="text-xs opacity-70 mb-1 font-bold">
@@ -375,10 +374,10 @@ function ChatPage() {
                                         }
                                     }}
                                     placeholder="Type a message..."
-                                    className="flex-1 bg-gray-50 border border-gray-200 px-4 py-3 rounded-2xl outline-none focus:border-black"
+                                    className="flex-1 bg-[#141822] border border-[#232838] text-gray-100 placeholder:text-gray-600 px-4 py-3 rounded-2xl outline-none focus:border-indigo-500 transition"
                                 />
 
-                                <button onClick={sendMessage} className="inline-flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-2xl font-black transition">
+                                <button onClick={sendMessage} className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white px-6 py-3 rounded-2xl font-black transition">
                                     <Send size={18} />
                                     Send
                                 </button>

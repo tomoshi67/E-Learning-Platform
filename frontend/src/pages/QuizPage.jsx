@@ -6,7 +6,7 @@ import { BookOpen, ListChecks, Plus, Trash2, Play, RotateCcw, Eye, Send, CheckCi
 
 function QuizPage() {
     const navigate = useNavigate();
-    const role = localStorage.getItem("role");
+    const role = sessionStorage.getItem("role");
 
     const [courses, setCourses] = useState([]);
     const [selectedCourseId, setSelectedCourseId] = useState("");
@@ -43,12 +43,12 @@ function QuizPage() {
     const [aiSaving, setAiSaving] = useState(false);
 
     const authHeaders = () => ({
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + sessionStorage.getItem("token"),
     });
 
     const authJsonHeaders = () => ({
         "Content-Type": "application/json",
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + sessionStorage.getItem("token"),
     });
 
     const loadQuizAttempts = async () => {
@@ -56,7 +56,7 @@ function QuizPage() {
             return;
         }
 
-        const email = localStorage.getItem("email");
+        const email = sessionStorage.getItem("email");
 
         const res = await fetch(
             `${API_URL}/quiz-attempts/user/` + encodeURIComponent(email),
@@ -83,26 +83,43 @@ function QuizPage() {
     };
 
     const loadCourses = async () => {
-        let url = `${API_URL}/courses/all`;
-
         if (role === "INSTRUCTOR") {
-            url =
-                `${API_URL}/courses/instructor/` +
-                encodeURIComponent(localStorage.getItem("email"));
+            const res = await fetch(
+                `${API_URL}/courses/instructor/` + encodeURIComponent(sessionStorage.getItem("email")),
+                {
+                    headers: authHeaders(),
+                }
+            );
+
+            const data = await res.json();
+            const email = sessionStorage.getItem("email");
+            setCourses(data.filter((course) => course.instructorEmail === email));
+            return;
         }
 
-        const res = await fetch(url, {
+
+        const email = sessionStorage.getItem("email");
+
+        const enrollRes = await fetch(
+            `${API_URL}/enrollments/user/` + encodeURIComponent(email),
+            {
+                headers: authHeaders(),
+            }
+        );
+
+        const enrollmentData = await enrollRes.json();
+
+        const courseRes = await fetch(`${API_URL}/courses/all`, {
             headers: authHeaders(),
         });
 
-        const data = await res.json();
+        const allCourses = await courseRes.json();
 
-        if (role === "INSTRUCTOR") {
-            const email = localStorage.getItem("email");
-            setCourses(data.filter((course) => course.instructorEmail === email));
-        } else {
-            setCourses(data);
-        }
+        const enrolledCourses = allCourses.filter((course) =>
+            enrollmentData.some((enrollment) => enrollment.courseId === course.id)
+        );
+
+        setCourses(enrolledCourses);
     };
 
     const loadQuizzes = async (courseId) => {
@@ -141,19 +158,22 @@ function QuizPage() {
             return;
         }
 
-        await fetch(`${API_URL}/quizzes/add`, {
+        const res = await fetch(`${API_URL}/quizzes/add`, {
             method: "POST",
             headers: authJsonHeaders(),
             body: JSON.stringify({
                 courseId: selectedCourseId,
                 title: quizTitle,
-                instructorEmail: localStorage.getItem("email"),
+                instructorEmail: sessionStorage.getItem("email"),
             }),
         });
 
-        alert("Quiz created successfully");
+        const newQuiz = await res.json();
+
         setQuizTitle("");
         await loadQuizzes(selectedCourseId);
+
+        await loadQuestions(newQuiz.id);
     };
 
     const deleteQuiz = async (quizId) => {
@@ -250,6 +270,7 @@ function QuizPage() {
         await loadQuestions(selectedQuizId);
     };
 
+
     const generateFromFile = async () => {
         if (!selectedQuizId) {
             alert("Select a quiz first");
@@ -270,7 +291,6 @@ function QuizPage() {
             const res = await fetch(`${API_URL}/quizzes/generate-ai`, {
                 method: "POST",
                 headers: authHeaders(),
-                body: formData,
             });
 
             if (!res.ok) {
@@ -375,7 +395,7 @@ function QuizPage() {
             method: "POST",
             headers: authJsonHeaders(),
             body: JSON.stringify({
-                userEmail: localStorage.getItem("email"),
+                userEmail: sessionStorage.getItem("email"),
                 quizId: selectedQuizId,
                 score: correct,
                 totalQuestions: questions.length,
@@ -444,7 +464,7 @@ function QuizPage() {
         await startQuiz(quizId);
     };
     const loadUnread = async () => {
-        const email = localStorage.getItem("email");
+        const email = sessionStorage.getItem("email");
 
         const res = await fetch(
             `${API_URL}/notifications/has-unread/` +
@@ -458,7 +478,7 @@ function QuizPage() {
         setHasUnread(data);
     };
     const loadChatUnread = async () => {
-        const email = localStorage.getItem("email");
+        const email = sessionStorage.getItem("email");
 
         const res = await fetch(
             `${API_URL}/chat/has-unread/` +
@@ -485,21 +505,21 @@ function QuizPage() {
     return (
         <DashboardLayout activePage="Quizzes" hasUnread={hasUnread} hasChatUnread={hasChatUnread}>
             <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="rounded-[2rem] bg-white border border-gray-100 shadow-sm p-6 h-fit">
+                <div className="rounded-[2rem] bg-[#0F131C] border border-[#232838] shadow-sm p-6 h-fit">
                     <div className="flex items-center gap-3 mb-5">
-                        <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30">
                             <BookOpen size={22} />
                         </div>
                         <div>
-                            <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Step 1</p>
-                            <h3 className="text-xl font-black">Select Course</h3>
+                            <p className="text-xs font-bold tracking-[0.25em] text-gray-500 uppercase">Step 1</p>
+                            <h3 className="text-xl font-black text-gray-100">Select Course</h3>
                         </div>
                     </div>
 
                     <select
                         value={selectedCourseId}
                         onChange={(e) => loadQuizzes(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 px-4 py-3 rounded-2xl outline-none focus:border-black transition"
+                        className="w-full bg-[#141822] border border-[#232838] text-gray-100 px-4 py-3 rounded-2xl outline-none focus:border-indigo-500 transition"
                     >
                         <option value="">Choose course</option>
                         {courses.map((course) => (
@@ -512,17 +532,17 @@ function QuizPage() {
                     {selectedCourseId && (
                         <div className="mt-6">
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white flex items-center justify-center">
                                     <ListChecks size={20} />
                                 </div>
                                 <div>
-                                    <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Step 2</p>
-                                    <h3 className="text-lg font-black">Select Quiz</h3>
+                                    <p className="text-xs font-bold tracking-[0.25em] text-gray-500 uppercase">Step 2</p>
+                                    <h3 className="text-lg font-black text-gray-100">Select Quiz</h3>
                                 </div>
                             </div>
 
                             {quizzes.length === 0 ? (
-                                <div className="rounded-3xl bg-gray-50 p-6 text-gray-500 text-center">No quizzes for this course.</div>
+                                <div className="rounded-3xl bg-[#141822] border border-[#232838] p-6 text-gray-500 text-center">No quizzes for this course.</div>
                             ) : (
                                 <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-2">
                                     {quizzes.map((quiz) => (
@@ -530,21 +550,21 @@ function QuizPage() {
                                             key={quiz.id}
                                             className={
                                                 selectedQuizId === quiz.id
-                                                    ? "bg-black text-white rounded-3xl p-4 shadow-lg"
-                                                    : "bg-gray-50 hover:bg-gray-100 rounded-3xl p-4 transition"
+                                                    ? "bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-3xl p-4 shadow-lg shadow-indigo-500/25"
+                                                    : "bg-[#141822] hover:bg-[#1A1F2B] border border-[#232838] rounded-3xl p-4 transition"
                                             }
                                         >
                                             <div className="flex justify-between items-center gap-3">
                                                 <div>
                                                     <p className="font-black">{quiz.title}</p>
                                                     {completedQuizzes[quiz.id] && (
-                                                        <p className="text-xs text-green-500 font-black mt-1">Completed</p>
+                                                        <p className="text-xs text-green-400 font-black mt-1">Completed</p>
                                                     )}
                                                 </div>
 
                                                 {role === "INSTRUCTOR" ? (
                                                     <div className="flex gap-2">
-                                                        <button onClick={() => loadQuestions(quiz.id)} className="bg-white text-black px-3 py-2 rounded-2xl text-sm font-bold hover:scale-105 transition">
+                                                        <button onClick={() => loadQuestions(quiz.id)} className="bg-white/10 hover:bg-white/20 text-current px-3 py-2 rounded-2xl text-sm font-bold hover:scale-105 transition">
                                                             <Pencil size={16} />
                                                         </button>
 
@@ -554,16 +574,16 @@ function QuizPage() {
                                                     </div>
                                                 ) : completedQuizzes[quiz.id] ? (
                                                     <div className="flex gap-2">
-                                                        <button onClick={() => reviewSavedQuiz(quiz.id)} className="bg-white text-black px-3 py-2 rounded-2xl text-sm font-bold">
+                                                        <button onClick={() => reviewSavedQuiz(quiz.id)} className="bg-white/10 hover:bg-white/20 text-current px-3 py-2 rounded-2xl text-sm font-bold">
                                                             <Eye size={16} />
                                                         </button>
 
-                                                        <button onClick={() => retakeQuiz(quiz.id)} className="bg-purple-600 text-white px-3 py-2 rounded-2xl text-sm font-bold">
+                                                        <button onClick={() => retakeQuiz(quiz.id)} className="bg-violet-600 hover:bg-violet-700 text-white px-3 py-2 rounded-2xl text-sm font-bold">
                                                             <RotateCcw size={16} />
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <button onClick={() => startQuiz(quiz.id)} className="inline-flex items-center gap-2 bg-white text-black px-4 py-2 rounded-2xl text-sm font-black hover:scale-105 transition">
+                                                    <button onClick={() => startQuiz(quiz.id)} className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 text-current px-4 py-2 rounded-2xl text-sm font-black hover:scale-105 transition">
                                                         <Play size={16} />
                                                         Start
                                                     </button>
@@ -577,17 +597,17 @@ function QuizPage() {
                     )}
 
                     {role === "INSTRUCTOR" && selectedCourseId && (
-                        <div className="mt-6 bg-gradient-to-br from-purple-50 to-white rounded-3xl p-5 border border-purple-100">
-                            <h3 className="font-black mb-3">Create New Quiz</h3>
+                        <div className="mt-6 bg-gradient-to-br from-indigo-500/10 to-transparent rounded-3xl p-5 border border-indigo-500/20">
+                            <h3 className="font-black mb-3 text-gray-100">Create New Quiz</h3>
 
                             <input
                                 placeholder="Quiz Title"
                                 value={quizTitle}
                                 onChange={(e) => setQuizTitle(e.target.value)}
-                                className="w-full bg-white p-3 mb-3 rounded-2xl border border-gray-200 outline-none focus:border-black"
+                                className="w-full bg-[#141822] border border-[#232838] text-gray-100 placeholder:text-gray-600 p-3 mb-3 rounded-2xl outline-none focus:border-indigo-500 transition"
                             />
 
-                            <button onClick={addQuiz} className="w-full inline-flex justify-center items-center gap-2 bg-black hover:bg-gray-800 text-white py-3 rounded-2xl font-black transition">
+                            <button onClick={addQuiz} className="w-full inline-flex justify-center items-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white py-3 rounded-2xl font-black transition">
                                 <Plus size={18} />
                                 Add Quiz
                             </button>
@@ -595,182 +615,44 @@ function QuizPage() {
                     )}
                 </div>
 
-                <div className="xl:col-span-2 rounded-[2rem] bg-white border border-gray-100 shadow-sm p-6">
+                <div className="xl:col-span-2 rounded-[2rem] bg-[#0F131C] border border-[#232838] shadow-sm p-6">
                     {role === "INSTRUCTOR" ? (
                         <div>
                             <div className="flex items-center justify-between mb-5">
                                 <div>
-                                    <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Question Bank</p>
-                                    <h3 className="text-2xl font-black">Quiz Questions</h3>
+                                    <p className="text-xs font-bold tracking-[0.25em] text-gray-500 uppercase">Question Bank</p>
+                                    <h3 className="text-2xl font-black text-gray-100">Quiz Questions</h3>
                                 </div>
                             </div>
 
-                            {!selectedQuizId ? (
-                                <div className="rounded-3xl bg-gray-50 p-10 text-center text-gray-500">Select a quiz to add or view questions.</div>
-                            ) : (
-                                <>
-                                    {/* ---------- AI Quiz Generator ---------- */}
-                                    <div className="bg-gradient-to-br from-indigo-50 to-white rounded-3xl p-5 border border-indigo-100 mb-5">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <Sparkles size={20} className="text-indigo-600" />
-                                            <h4 className="font-black">Generate Questions with AI</h4>
-                                        </div>
-
-                                        <p className="text-sm text-gray-500 mb-3">
-                                            Upload a photo or PDF of a question paper and AI will extract the questions for you to review.
-                                        </p>
-
-                                        <div className="flex flex-col sm:flex-row gap-3">
-                                            <input
-                                                type="file"
-                                                accept="image/*,.pdf"
-                                                onChange={(e) => setAiFile(e.target.files[0])}
-                                                className="flex-1 bg-white p-3 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm"
-                                            />
-
-                                            <button
-                                                onClick={generateFromFile}
-                                                disabled={aiGenerating}
-                                                className="inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-3 rounded-2xl font-black transition"
-                                            >
-                                                <Upload size={18} />
-                                                {aiGenerating ? "Generating..." : "Generate"}
-                                            </button>
-                                        </div>
-
-                                        {aiGeneratedQuestions.length > 0 && (
-                                            <div className="mt-5 space-y-4">
-                                                <p className="text-sm font-bold text-gray-600">
-                                                    Review and edit before saving ({aiGeneratedQuestions.length} question{aiGeneratedQuestions.length > 1 ? "s" : ""}):
-                                                </p>
-
-                                                {aiGeneratedQuestions.map((q, index) => (
-                                                    <div key={index} className="bg-white rounded-3xl p-4 border border-gray-100">
-                                                        <div className="flex justify-between items-start gap-3 mb-3">
-                                                            <input
-                                                                value={q.question}
-                                                                onChange={(e) => updateGeneratedQuestion(index, "question", e.target.value)}
-                                                                className="flex-1 bg-gray-50 p-3 rounded-2xl border border-gray-200 outline-none focus:border-black font-bold"
-                                                            />
-                                                            <button
-                                                                onClick={() => removeGeneratedQuestion(index)}
-                                                                className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-2 rounded-2xl transition"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
-                                                            <input value={q.optionA} onChange={(e) => updateGeneratedQuestion(index, "optionA", e.target.value)} className="bg-gray-50 p-2 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm" />
-                                                            <input value={q.optionB} onChange={(e) => updateGeneratedQuestion(index, "optionB", e.target.value)} className="bg-gray-50 p-2 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm" />
-                                                            <input value={q.optionC} onChange={(e) => updateGeneratedQuestion(index, "optionC", e.target.value)} className="bg-gray-50 p-2 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm" />
-                                                            <input value={q.optionD} onChange={(e) => updateGeneratedQuestion(index, "optionD", e.target.value)} className="bg-gray-50 p-2 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm" />
-                                                        </div>
-
-                                                        <select
-                                                            value={q.correctAnswer}
-                                                            onChange={(e) => updateGeneratedQuestion(index, "correctAnswer", e.target.value)}
-                                                            className="bg-gray-50 p-2 rounded-2xl border border-gray-200 outline-none focus:border-black text-sm"
-                                                        >
-                                                            <option value="A">A</option>
-                                                            <option value="B">B</option>
-                                                            <option value="C">C</option>
-                                                            <option value="D">D</option>
-                                                        </select>
-                                                    </div>
-                                                ))}
-
-                                                <button
-                                                    onClick={saveAllGeneratedQuestions}
-                                                    disabled={aiSaving}
-                                                    className="w-full inline-flex justify-center items-center gap-2 bg-black hover:bg-gray-800 disabled:opacity-50 text-white py-3 rounded-2xl font-black transition"
-                                                >
-                                                    <Save size={18} />
-                                                    {aiSaving ? "Saving..." : `Save All ${aiGeneratedQuestions.length} Questions`}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-5 border border-gray-100 mb-5">
-                                        <h4 className="font-black mb-3">Add Question</h4>
-
-                                        <input name="question" placeholder="Question" value={questionData.question} onChange={changeQuestion} className="w-full bg-white p-3 mb-3 rounded-2xl border border-gray-200 outline-none focus:border-black" />
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            <input name="optionA" placeholder="Option A" value={questionData.optionA} onChange={changeQuestion} className="w-full bg-white p-3 rounded-2xl border border-gray-200 outline-none focus:border-black" />
-                                            <input name="optionB" placeholder="Option B" value={questionData.optionB} onChange={changeQuestion} className="w-full bg-white p-3 rounded-2xl border border-gray-200 outline-none focus:border-black" />
-                                            <input name="optionC" placeholder="Option C" value={questionData.optionC} onChange={changeQuestion} className="w-full bg-white p-3 rounded-2xl border border-gray-200 outline-none focus:border-black" />
-                                            <input name="optionD" placeholder="Option D" value={questionData.optionD} onChange={changeQuestion} className="w-full bg-white p-3 rounded-2xl border border-gray-200 outline-none focus:border-black" />
-                                        </div>
-
-                                        <select name="correctAnswer" value={questionData.correctAnswer} onChange={changeQuestion} className="w-full bg-white p-3 mt-3 mb-3 rounded-2xl border border-gray-200 outline-none focus:border-black">
-                                            <option value="">Correct Answer</option>
-                                            <option value="A">A</option>
-                                            <option value="B">B</option>
-                                            <option value="C">C</option>
-                                            <option value="D">D</option>
-                                        </select>
-
-                                        <button onClick={addQuestion} className="w-full inline-flex justify-center items-center gap-2 bg-black text-white py-3 rounded-2xl font-black hover:bg-gray-800 transition">
-                                            <Plus size={18} />
-                                            Add Question
-                                        </button>
-                                    </div>
-
-                                    <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-2">
-                                        {questions.length === 0 ? (
-                                            <p className="text-gray-500">No questions added yet.</p>
-                                        ) : (
-                                            questions.map((question, index) => (
-                                                <div key={question.id} className="bg-gray-50 hover:bg-gray-100 rounded-3xl p-5 transition">
-                                                    <div className="flex justify-between gap-3">
-                                                        <div>
-                                                            <p className="font-black">Q{index + 1}. {question.question}</p>
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3 text-sm">
-                                                                <p>A. {question.optionA}</p>
-                                                                <p>B. {question.optionB}</p>
-                                                                <p>C. {question.optionC}</p>
-                                                                <p>D. {question.optionD}</p>
-                                                            </div>
-                                                            <p className="text-sm text-green-600 font-black mt-3">Correct Answer: {question.correctAnswer}</p>
-                                                        </div>
-
-                                                        <button onClick={() => deleteQuestion(question.id)} className="bg-red-50 text-red-600 hover:bg-red-600 hover:text-white px-3 py-2 rounded-2xl h-fit transition">
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </>
-                            )}
+                            <div className="rounded-3xl bg-[#141822] border border-[#232838] p-10 text-center text-gray-500">
+                                Click the pencil icon on a quiz, or create a new one, to manage its questions in a popup.
+                            </div>
                         </div>
                     ) : (
                         <div>
                             <div className="mb-5">
-                                <p className="text-xs font-bold tracking-[0.25em] text-gray-400 uppercase">Student Quiz</p>
-                                <h3 className="text-2xl font-black">Attempt Quiz</h3>
+                                <p className="text-xs font-bold tracking-[0.25em] text-gray-500 uppercase">Student Quiz</p>
+                                <h3 className="text-2xl font-black text-gray-100">Attempt Quiz</h3>
                             </div>
 
                             {!selectedCourseId ? (
-                                <div className="rounded-3xl bg-gray-50 p-10 text-center text-gray-500">Select a course first.</div>
+                                <div className="rounded-3xl bg-[#141822] border border-[#232838] p-10 text-center text-gray-500">Select a course first.</div>
                             ) : !selectedQuizId ? (
-                                <div className="rounded-3xl bg-gray-50 p-10 text-center text-gray-500">Choose a quiz from the left and click Start.</div>
+                                <div className="rounded-3xl bg-[#141822] border border-[#232838] p-10 text-center text-gray-500">Choose a quiz from the left and click Start.</div>
                             ) : quizCompleted ? (
-                                <div className="bg-gradient-to-br from-green-50 to-white rounded-3xl p-8 border border-green-100">
-                                    <CheckCircle2 className="text-green-600 mb-3" size={40} />
-                                    <h3 className="text-3xl font-black mb-3">Quiz Completed</h3>
-                                    <p className="text-gray-600 mb-5">Your score is {score ?? quizAttempts[selectedQuizId]?.score} out of {questions.length || quizAttempts[selectedQuizId]?.totalQuestions}.</p>
+                                <div className="bg-gradient-to-br from-green-500/10 to-transparent rounded-3xl p-8 border border-green-500/20">
+                                    <CheckCircle2 className="text-green-400 mb-3" size={40} />
+                                    <h3 className="text-3xl font-black mb-3 text-gray-100">Quiz Completed</h3>
+                                    <p className="text-gray-400 mb-5">Your score is {score ?? quizAttempts[selectedQuizId]?.score} out of {questions.length || quizAttempts[selectedQuizId]?.totalQuestions}.</p>
 
                                     <div className="flex gap-3 mb-5">
-                                        <button onClick={() => setReviewMode(!reviewMode)} className="inline-flex items-center gap-2 bg-white border px-6 py-3 rounded-2xl font-bold hover:bg-gray-50 transition">
+                                        <button onClick={() => setReviewMode(!reviewMode)} className="inline-flex items-center gap-2 bg-[#141822] border border-[#232838] text-gray-200 px-6 py-3 rounded-2xl font-bold hover:bg-[#1A1F2B] transition">
                                             <Eye size={18} />
                                             {reviewMode ? "Hide Review" : "Review Quiz"}
                                         </button>
 
-                                        <button onClick={closeCompletedQuiz} className="bg-black text-white px-6 py-3 rounded-2xl font-bold hover:bg-gray-800 transition">
+                                        <button onClick={closeCompletedQuiz} className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white px-6 py-3 rounded-2xl font-bold hover:shadow-lg hover:shadow-indigo-500/30 transition">
                                             Close Quiz
                                         </button>
                                     </div>
@@ -783,10 +665,10 @@ function QuizPage() {
                                                 const isCorrect = userAnswer === question.correctAnswer;
 
                                                 return (
-                                                    <div key={question.id} className="bg-white rounded-3xl p-5">
-                                                        <p className="font-black mb-3">Q{index + 1}. {question.question}</p>
+                                                    <div key={question.id} className="bg-[#141822] border border-[#232838] rounded-3xl p-5">
+                                                        <p className="font-black mb-3 text-gray-100">Q{index + 1}. {question.question}</p>
                                                         {hasSavedAnswer ? (
-                                                            <p className={isCorrect ? "text-green-600 font-black" : "text-red-600 font-black"}>
+                                                            <p className={isCorrect ? "text-green-400 font-black" : "text-red-400 font-black"}>
                                                                 Your Answer: {userAnswer}
                                                             </p>
                                                         ) : (
@@ -794,7 +676,7 @@ function QuizPage() {
                                                                 Previous selected answer was not saved by the backend.
                                                             </p>
                                                         )}
-                                                        <p className="text-green-600 font-black">Correct Answer: {question.correctAnswer}</p>
+                                                        <p className="text-green-400 font-black">Correct Answer: {question.correctAnswer}</p>
                                                     </div>
                                                 );
                                             })}
@@ -802,17 +684,17 @@ function QuizPage() {
                                     )}
                                 </div>
                             ) : !quizStarted ? (
-                                <div className="rounded-3xl bg-gray-50 p-10 text-center text-gray-500">Click Start to begin the quiz.</div>
+                                <div className="rounded-3xl bg-[#141822] border border-[#232838] p-10 text-center text-gray-500">Click Start to begin the quiz.</div>
                             ) : questions.length === 0 ? (
-                                <div className="rounded-3xl bg-gray-50 p-10 text-center text-gray-500">This quiz has no questions yet.</div>
+                                <div className="rounded-3xl bg-[#141822] border border-[#232838] p-10 text-center text-gray-500">This quiz has no questions yet.</div>
                             ) : (
                                 <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-2">
                                     {questions.map((question, index) => (
-                                        <div key={question.id} className="bg-gray-50 rounded-3xl p-5">
-                                            <p className="font-black mb-3">Q{index + 1}. {question.question}</p>
+                                        <div key={question.id} className="bg-[#141822] border border-[#232838] rounded-3xl p-5">
+                                            <p className="font-black mb-3 text-gray-100">Q{index + 1}. {question.question}</p>
 
                                             {["A", "B", "C", "D"].map((option) => (
-                                                <label key={option} className="block bg-white hover:bg-gray-100 p-3 rounded-2xl mb-2 cursor-pointer transition">
+                                                <label key={option} className="block bg-[#1A1F2B] hover:bg-[#20263A] text-gray-200 p-3 rounded-2xl mb-2 cursor-pointer transition">
                                                     <input type="radio" name={"question-" + question.id} value={option} checked={selectedAnswers[question.id] === option} onChange={(e) => setSelectedAnswers({ ...selectedAnswers, [question.id]: e.target.value })} className="mr-2" />
                                                     {option}. {question["option" + option]}
                                                 </label>
@@ -820,7 +702,7 @@ function QuizPage() {
                                         </div>
                                     ))}
 
-                                    <button onClick={submitQuiz} className="inline-flex items-center gap-2 bg-black hover:bg-gray-800 text-white px-6 py-3 rounded-2xl font-black transition">
+                                    <button onClick={submitQuiz} className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white px-6 py-3 rounded-2xl font-black transition">
                                         <Send size={18} />
                                         Submit Quiz
                                     </button>
@@ -830,6 +712,166 @@ function QuizPage() {
                     )}
                 </div>
             </section>
+
+            {selectedQuizId && role === "INSTRUCTOR" && (
+                <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#0F131C] border border-[#232838] rounded-[2rem] p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl relative">
+                        <div className="flex items-center justify-between mb-5">
+                            <div>
+                                <p className="text-xs font-bold tracking-[0.25em] text-gray-500 uppercase">Question Bank</p>
+                                <h3 className="text-2xl font-black text-gray-100">Quiz Questions</h3>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setSelectedQuizId("");
+                                    setQuestions([]);
+                                }}
+                                className="bg-[#1A1F2B] hover:bg-[#232838] text-gray-300 w-10 h-10 rounded-full flex items-center justify-center transition"
+                                title="Close"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        {/* ---------- AI Quiz Generator ---------- */}
+                        <div className="bg-gradient-to-br from-indigo-500/10 to-transparent rounded-3xl p-5 border border-indigo-500/20 mb-5">
+                            <div className="flex items-center gap-2 mb-3">
+                                <Sparkles size={20} className="text-indigo-400" />
+                                <h4 className="font-black text-gray-100">Generate Questions with AI</h4>
+                            </div>
+
+                            <p className="text-sm text-gray-500 mb-3">
+                                Upload a photo or PDF of a question paper and AI will extract the questions for you to review.
+                            </p>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    onChange={(e) => setAiFile(e.target.files[0])}
+                                    className="flex-1 bg-[#141822] border border-[#232838] text-gray-300 p-3 rounded-2xl outline-none focus:border-indigo-500 text-sm transition"
+                                />
+
+                                <button
+                                    onClick={generateFromFile}
+                                    disabled={aiGenerating}
+                                    className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:shadow-lg hover:shadow-indigo-500/30 disabled:opacity-50 text-white px-5 py-3 rounded-2xl font-black transition"
+                                >
+                                    <Upload size={18} />
+                                    {aiGenerating ? "Generating..." : "Generate"}
+                                </button>
+                            </div>
+
+                            {aiGeneratedQuestions.length > 0 && (
+                                <div className="mt-5 space-y-4">
+                                    <p className="text-sm font-bold text-gray-400">
+                                        Review and edit before saving ({aiGeneratedQuestions.length} question{aiGeneratedQuestions.length > 1 ? "s" : ""}):
+                                    </p>
+
+                                    {aiGeneratedQuestions.map((q, index) => (
+                                        <div key={index} className="bg-[#141822] rounded-3xl p-4 border border-[#232838]">
+                                            <div className="flex justify-between items-start gap-3 mb-3">
+                                                <input
+                                                    value={q.question}
+                                                    onChange={(e) => updateGeneratedQuestion(index, "question", e.target.value)}
+                                                    className="flex-1 bg-[#1A1F2B] border border-[#232838] text-gray-100 p-3 rounded-2xl outline-none focus:border-indigo-500 font-bold transition"
+                                                />
+                                                <button
+                                                    onClick={() => removeGeneratedQuestion(index)}
+                                                    className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-3 py-2 rounded-2xl transition"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                                                <input value={q.optionA} onChange={(e) => updateGeneratedQuestion(index, "optionA", e.target.value)} className="bg-[#1A1F2B] border border-[#232838] text-gray-200 p-2 rounded-2xl outline-none focus:border-indigo-500 text-sm transition" />
+                                                <input value={q.optionB} onChange={(e) => updateGeneratedQuestion(index, "optionB", e.target.value)} className="bg-[#1A1F2B] border border-[#232838] text-gray-200 p-2 rounded-2xl outline-none focus:border-indigo-500 text-sm transition" />
+                                                <input value={q.optionC} onChange={(e) => updateGeneratedQuestion(index, "optionC", e.target.value)} className="bg-[#1A1F2B] border border-[#232838] text-gray-200 p-2 rounded-2xl outline-none focus:border-indigo-500 text-sm transition" />
+                                                <input value={q.optionD} onChange={(e) => updateGeneratedQuestion(index, "optionD", e.target.value)} className="bg-[#1A1F2B] border border-[#232838] text-gray-200 p-2 rounded-2xl outline-none focus:border-indigo-500 text-sm transition" />
+                                            </div>
+
+                                            <select
+                                                value={q.correctAnswer}
+                                                onChange={(e) => updateGeneratedQuestion(index, "correctAnswer", e.target.value)}
+                                                className="bg-[#1A1F2B] border border-[#232838] text-gray-200 p-2 rounded-2xl outline-none focus:border-indigo-500 text-sm transition"
+                                            >
+                                                <option value="A">A</option>
+                                                <option value="B">B</option>
+                                                <option value="C">C</option>
+                                                <option value="D">D</option>
+                                            </select>
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        onClick={saveAllGeneratedQuestions}
+                                        disabled={aiSaving}
+                                        className="w-full inline-flex justify-center items-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:shadow-lg hover:shadow-indigo-500/30 disabled:opacity-50 text-white py-3 rounded-2xl font-black transition"
+                                    >
+                                        <Save size={18} />
+                                        {aiSaving ? "Saving..." : `Save All ${aiGeneratedQuestions.length} Questions`}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-[#141822] rounded-3xl p-5 border border-[#232838] mb-5">
+                            <h4 className="font-black mb-3 text-gray-100">Add Question</h4>
+
+                            <input name="question" placeholder="Question" value={questionData.question} onChange={changeQuestion} className="w-full bg-[#1A1F2B] border border-[#232838] text-gray-100 placeholder:text-gray-600 p-3 mb-3 rounded-2xl outline-none focus:border-indigo-500 transition" />
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <input name="optionA" placeholder="Option A" value={questionData.optionA} onChange={changeQuestion} className="w-full bg-[#1A1F2B] border border-[#232838] text-gray-100 placeholder:text-gray-600 p-3 rounded-2xl outline-none focus:border-indigo-500 transition" />
+                                <input name="optionB" placeholder="Option B" value={questionData.optionB} onChange={changeQuestion} className="w-full bg-[#1A1F2B] border border-[#232838] text-gray-100 placeholder:text-gray-600 p-3 rounded-2xl outline-none focus:border-indigo-500 transition" />
+                                <input name="optionC" placeholder="Option C" value={questionData.optionC} onChange={changeQuestion} className="w-full bg-[#1A1F2B] border border-[#232838] text-gray-100 placeholder:text-gray-600 p-3 rounded-2xl outline-none focus:border-indigo-500 transition" />
+                                <input name="optionD" placeholder="Option D" value={questionData.optionD} onChange={changeQuestion} className="w-full bg-[#1A1F2B] border border-[#232838] text-gray-100 placeholder:text-gray-600 p-3 rounded-2xl outline-none focus:border-indigo-500 transition" />
+                            </div>
+
+                            <select name="correctAnswer" value={questionData.correctAnswer} onChange={changeQuestion} className="w-full bg-[#1A1F2B] border border-[#232838] text-gray-100 p-3 mt-3 mb-3 rounded-2xl outline-none focus:border-indigo-500 transition">
+                                <option value="">Correct Answer</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                            </select>
+
+                            <button onClick={addQuestion} className="w-full inline-flex justify-center items-center gap-2 bg-gradient-to-r from-indigo-500 to-violet-600 hover:shadow-lg hover:shadow-indigo-500/30 text-white py-3 rounded-2xl font-black transition">
+                                <Plus size={18} />
+                                Add Question
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-2">
+                            {questions.length === 0 ? (
+                                <p className="text-gray-500">No questions added yet.</p>
+                            ) : (
+                                questions.map((question, index) => (
+                                    <div key={question.id} className="bg-[#141822] hover:bg-[#1A1F2B] border border-[#232838] rounded-3xl p-5 transition">
+                                        <div className="flex justify-between gap-3">
+                                            <div>
+                                                <p className="font-black text-gray-100">Q{index + 1}. {question.question}</p>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3 text-sm text-gray-400">
+                                                    <p>A. {question.optionA}</p>
+                                                    <p>B. {question.optionB}</p>
+                                                    <p>C. {question.optionC}</p>
+                                                    <p>D. {question.optionD}</p>
+                                                </div>
+                                                <p className="text-sm text-green-400 font-black mt-3">Correct Answer: {question.correctAnswer}</p>
+                                            </div>
+
+                                            <button onClick={() => deleteQuestion(question.id)} className="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-3 py-2 rounded-2xl h-fit transition">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </DashboardLayout>
     );
 }
