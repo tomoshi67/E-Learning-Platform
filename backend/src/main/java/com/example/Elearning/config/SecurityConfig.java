@@ -42,7 +42,10 @@ public class SecurityConfig {
                     config.setAllowedOriginPatterns(List.of(
                             "http://localhost:5173",
                             "http://*:3000",
-                            "http://YOUR_SERVER_IP:3000"
+                            "http://localhost:3000",
+                            "https://your-project.vercel.app",
+                            "https://e-learning-platform-seven-wine.vercel.app"
+
                     ));
                     config.setExposedHeaders(List.of("*"));
                     config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
