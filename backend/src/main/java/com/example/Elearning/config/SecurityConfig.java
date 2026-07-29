@@ -62,8 +62,6 @@ public class SecurityConfig {
                         .requestMatchers("/auth/register", "/auth/login", "/hello").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
 
-                        // WebSocket handshake: JWT is validated separately at the STOMP CONNECT
-                        // frame level (see StompAuthChannelInterceptor), not via this HTTP filter.
                         .requestMatchers("/ws-chat/**").permitAll()
 
                         .requestMatchers("/payments/**").hasRole("USER")

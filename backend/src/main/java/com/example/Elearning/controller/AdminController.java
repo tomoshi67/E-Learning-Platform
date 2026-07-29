@@ -9,7 +9,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/admin")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+        "http://localhost:5173",
+        "https://e-learning-platform-seven-wine.vercel.app"
+})
 public class AdminController {
 
     private final UserRepository userRepository;

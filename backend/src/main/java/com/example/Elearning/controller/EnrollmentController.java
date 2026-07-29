@@ -8,7 +8,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/enrollments")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "https://e-learning-platform-seven-wine.vercel.app"
+})
 public class EnrollmentController {
 
     private final EnrollmentRepository enrollmentRepository;

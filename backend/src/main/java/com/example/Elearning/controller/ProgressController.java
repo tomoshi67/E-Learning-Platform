@@ -9,7 +9,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/progress")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "https://e-learning-platform-seven-wine.vercel.app"
+})
 public class ProgressController {
 
     private final ProgressRepository progressRepository;

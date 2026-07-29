@@ -15,7 +15,10 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/payments")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "https://e-learning-platform-seven-wine.vercel.app"
+})
 public class PaymentController {
 
     private final PaymentRepository paymentRepository;
@@ -50,10 +53,8 @@ public class PaymentController {
         SessionCreateParams params =
                 SessionCreateParams.builder()
                         .setMode(SessionCreateParams.Mode.PAYMENT)
-                        .setSuccessUrl(
-                                "http://localhost:5173/payment-success?session_id={CHECKOUT_SESSION_ID}"
-                        )
-                        .setCancelUrl("http://localhost:5173/payment-cancel")
+                        .setSuccessUrl("https://e-learning-platform-seven-wine.vercel.app/payment-success?session_id={CHECKOUT_SESSION_ID}")
+                        .setCancelUrl("https://e-learning-platform-seven-wine.vercel.app/payment-cancel")
                         .addLineItem(
                                 SessionCreateParams.LineItem.builder()
                                         .setQuantity(1L)

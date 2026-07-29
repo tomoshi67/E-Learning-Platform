@@ -24,7 +24,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/doubts")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "https://e-learning-platform-seven-wine.vercel.app"
+})
 public class DoubtController {
 
     private final DoubtMessageRepository doubtMessageRepository;

@@ -11,51 +11,83 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+
 @Component
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
 
-    public StompAuthChannelInterceptor(JwtUtil jwtUtil,
-                                       CustomUserDetailsService userDetailsService) {
+
+    public StompAuthChannelInterceptor(
+            JwtUtil jwtUtil,
+            CustomUserDetailsService userDetailsService
+    ) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
     }
 
+
     @Override
-    public Message<?> preSend(@NonNull Message<?> message, @NonNull MessageChannel channel) {
+    public Message<?> preSend(
+            @NonNull Message<?> message,
+            @NonNull MessageChannel channel
+    ) {
+
         StompHeaderAccessor accessor =
-                MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-
-        if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-
-            String authHeader = accessor.getFirstNativeHeader("Authorization");
-
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String token = authHeader.substring(7);
-
-                if (jwtUtil.validateToken(token)) {
-                    String email = jwtUtil.extractEmail(token);
-
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-
-                    UsernamePasswordAuthenticationToken authToken =
-                            new UsernamePasswordAuthenticationToken(
-                                    userDetails,
-                                    null,
-                                    userDetails.getAuthorities()
-                            );
+                MessageHeaderAccessor.getAccessor(
+                        message,
+                        StompHeaderAccessor.class
+                );
 
 
-                    accessor.setUser(authToken);
-                } else {
-                    throw new IllegalArgumentException("Invalid or expired token");
-                }
-            } else {
-                throw new IllegalArgumentException("Missing Authorization header on CONNECT");
+        if (accessor != null &&
+                StompCommand.CONNECT.equals(accessor.getCommand())) {
+
+
+            String authHeader =
+                    accessor.getFirstNativeHeader("Authorization");
+
+
+            if (authHeader == null ||
+                    !authHeader.startsWith("Bearer ")) {
+
+                throw new IllegalArgumentException(
+                        "Missing Authorization header"
+                );
             }
+
+
+            String token = authHeader.substring(7);
+
+
+            if (!jwtUtil.validateToken(token)) {
+
+                throw new IllegalArgumentException(
+                        "Invalid or expired token"
+                );
+
+            }
+
+
+            String email = jwtUtil.extractEmail(token);
+
+
+            UserDetails userDetails =
+                    userDetailsService.loadUserByUsername(email);
+
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+
+
+            accessor.setUser(authentication);
         }
+
 
         return message;
     }

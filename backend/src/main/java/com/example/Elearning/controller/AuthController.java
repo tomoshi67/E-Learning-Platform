@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+        "http://localhost:5173",
+        "https://e-learning-platform-seven-wine.vercel.app"
+})
 public class AuthController {
 
     private final UserRepository userRepository;

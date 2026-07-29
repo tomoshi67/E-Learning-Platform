@@ -20,7 +20,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/courses")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+        "http://localhost:5173",
+        "https://e-learning-platform-seven-wine.vercel.app"
+})
 public class CourseController {
 
     private final CourseRepository courseRepository;
